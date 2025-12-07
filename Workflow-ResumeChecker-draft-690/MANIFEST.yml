@@ -1,0 +1,11 @@
+type: Workflow
+version: 1.0.0
+main:
+    id: 7574310289912004642
+    name: ResumeChecker
+    desc: 建立简历筛查的工作流
+    icon: FileBizType.BIZ_BOT_ICON/2156560362253756_1763531537322181637.jpeg
+    version: ""
+    flowMode: 0
+    commitId: ""
+sub: []
