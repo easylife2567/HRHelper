@@ -57,14 +57,16 @@ export class FeishuService {
             if (res.data.data && res.data.data.items) {
                 const mappedItems = res.data.data.items.map((item: any) => {
                     const f = item.fields;
-                    // Safely parse JSON fields
+                    // Safely parse JSON fields if needed, but for general table view, raw fields are good.
+                    // We still parse specific known fields for backward compatibility with other pages
                     let questions = undefined;
                     let emailDraft = undefined;
-                    // Try parsing from potential field names
                     try { questions = f["questions_list"] ? JSON.parse(f["questions_list"]) : (f["面试题"] ? JSON.parse(f["面试题"]) : undefined); } catch { }
                     try { emailDraft = f["email_draft_list"] ? JSON.parse(f["email_draft_list"]) : (f["邮件内容"] ? JSON.parse(f["邮件内容"]) : undefined); } catch { }
 
                     return {
+                        ...f, // Spread all raw fields for the generic table view
+                        // Standardized fields for app logic
                         name: f["candidate_name"] || f["姓名"],
                         email: f["email"] || f["邮箱"],
                         score: f["overall_score"] || f["评分"],
@@ -73,7 +75,7 @@ export class FeishuService {
                         emailDraft: emailDraft,
                         status: f["status"] || '待面试',
                         id: item.record_id,
-                        created_at: item.created_time // Use system created_time
+                        created_at: item.created_time
                     };
                 });
 
@@ -84,6 +86,52 @@ export class FeishuService {
         } catch (e) {
             console.error('Feishu Fetch Failed, falling back to local:', (e as Error).message);
             return this.loadLocalCandidates();
+        }
+    }
+
+    static async updateCandidate(recordId: string, fields: any) {
+        if (!FEISHU_APP_TOKEN || !FEISHU_TABLE_ID) return { success: false, message: 'Feishu config missing' };
+
+        const token = await this.getTenantAccessToken();
+        if (!token) return { success: false, message: 'Auth failed' };
+
+        try {
+            await axios.put(`https://open.feishu.cn/open-apis/bitable/v1/apps/${FEISHU_APP_TOKEN}/tables/${FEISHU_TABLE_ID}/records/${recordId}`, {
+                fields
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            return { success: true };
+        } catch (e) {
+            console.error('Update Failed', (e as Error).message);
+            return { success: false, message: (e as Error).message };
+        }
+    }
+
+    static async deleteCandidate(recordId: string) {
+        if (!FEISHU_APP_TOKEN || !FEISHU_TABLE_ID) {
+            return { success: false, message: 'Feishu config missing' };
+        }
+
+        const token = await this.getTenantAccessToken();
+        if (!token) return { success: false, message: 'Auth failed' };
+
+        try {
+            await axios.delete(`https://open.feishu.cn/open-apis/bitable/v1/apps/${FEISHU_APP_TOKEN}/tables/${FEISHU_TABLE_ID}/records/${recordId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            return { success: true };
+        } catch (e) {
+            const status = (e as any).response?.status;
+            console.error('Delete Failed:', (e as Error).message, 'Status:', status);
+
+            if (status === 403) {
+                return {
+                    success: false,
+                    message: 'Permission denied: Feishu App lacks "write" permission for Bitable. Go to Feishu Console -> Permissions -> Enable "bitable:app:records:write".'
+                };
+            }
+            return { success: false, message: (e as Error).message };
         }
     }
 
@@ -109,12 +157,13 @@ export class FeishuService {
         // Map data to Feishu Fields
         // JSON.stringify complex objects to text fields
         const fields = {
-            "姓名": data.name,
-            "评分": data.score,
-            "邮箱": data.email,
-            "总结": data.summary,
-            "面试题": data.interviewQuestions ? JSON.stringify(data.interviewQuestions) : "",
-            "邮件内容": data.emailDraft ? JSON.stringify(data.emailDraft) : ""
+            "candidate_name": data.name,
+            "overall_score": data.score,
+            "email": data.email,
+            "summary": data.summary,
+            "questions_list": data.interviewQuestions ? JSON.stringify(data.interviewQuestions) : "",
+            "email_draft_list": data.emailDraft ? JSON.stringify(data.emailDraft) : "",
+            "status": "待面试"
         };
 
         await axios.post(`https://open.feishu.cn/open-apis/bitable/v1/apps/${FEISHU_APP_TOKEN}/tables/${FEISHU_TABLE_ID}/records`, {

@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Typography, Upload, TextArea, Button, Card, Toast, Spin } from '@douyinfe/semi-ui';
-import { IconUpload, IconFile, IconDelete } from '@douyinfe/semi-icons';
+import { IconUpload, IconFile, IconDelete, IconHome } from '@douyinfe/semi-icons';
+import { Breadcrumb } from '@arco-design/web-react';
+import '@arco-design/web-react/dist/css/arco.css';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const { Title, Text } = Typography;
 
@@ -164,6 +167,13 @@ export const ResumeEvaluation: React.FC = () => {
 
     return (
         <div style={{ maxWidth: 1200, margin: '0 auto', paddingBottom: 40 }}>
+            <Breadcrumb style={{ margin: '16px 0' }}>
+                <Breadcrumb.Item>
+                    <IconHome />
+                </Breadcrumb.Item>
+                <Breadcrumb.Item>Dashboard</Breadcrumb.Item>
+                <Breadcrumb.Item>Resume Evaluation</Breadcrumb.Item>
+            </Breadcrumb>
             <Title heading={2} style={{ marginBottom: 24 }}>简历评估</Title>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 24 }}>
@@ -224,7 +234,32 @@ export const ResumeEvaluation: React.FC = () => {
 
                     {!loading && report && (
                         <div className="markdown-body" style={{ padding: '0 10px' }}>
-                            <ReactMarkdown>{report}</ReactMarkdown>
+                            <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                    table: ({ node, ...props }) => (
+                                        <div style={{ overflowX: 'auto', margin: '16px 0', border: '1px solid var(--semi-color-border)', borderRadius: 4 }}>
+                                            <table {...props} style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }} />
+                                        </div>
+                                    ),
+                                    thead: ({ node, ...props }) => (
+                                        <thead {...props} style={{ background: 'var(--semi-color-fill-0)' }} />
+                                    ),
+                                    th: ({ node, ...props }) => (
+                                        <th {...props} style={{ padding: '12px 16px', borderBottom: '1px solid var(--semi-color-border)', textAlign: 'left', fontWeight: 600, color: 'var(--semi-color-text-0)' }} />
+                                    ),
+                                    td: ({ node, ...props }) => (
+                                        <td {...props} style={{ padding: '12px 16px', borderBottom: '1px solid var(--semi-color-border)', color: 'var(--semi-color-text-1)' }} />
+                                    ),
+                                    h1: ({ node, ...props }) => <h1 {...props} style={{ margin: '24px 0 16px', fontSize: 24, fontWeight: 600, borderBottom: '1px solid var(--semi-color-border)', paddingBottom: 8 }} />,
+                                    h2: ({ node, ...props }) => <h2 {...props} style={{ margin: '20px 0 12px', fontSize: 20, fontWeight: 600, color: 'var(--semi-color-text-0)' }} />,
+                                    h3: ({ node, ...props }) => <h3 {...props} style={{ margin: '16px 0 8px', fontSize: 16, fontWeight: 600 }} />,
+                                    p: ({ node, ...props }) => <p {...props} style={{ margin: '0 0 12px', lineHeight: 1.6, color: 'var(--semi-color-text-1)' }} />,
+                                    li: ({ node, ...props }) => <li {...props} style={{ marginBottom: 4, lineHeight: 1.6 }} />,
+                                }}
+                            >
+                                {report}
+                            </ReactMarkdown>
                         </div>
                     )}
                 </Card>

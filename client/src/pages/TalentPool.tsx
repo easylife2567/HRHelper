@@ -1,81 +1,326 @@
-import React, { useEffect, useState } from 'react';
-import { Button, Table, Toast, Tag, Space } from '@douyinfe/semi-ui';
+import React, { useState, useEffect } from 'react';
+import {
+    Table,
+    Button,
+    Input,
+    Form,
+    Card,
+    Grid,
+    Modal,
+    Message,
+    Space,
+    Dropdown,
+    Menu,
+    Breadcrumb,
+    Select
+} from '@arco-design/web-react';
+import { IconPlus, IconRefresh, IconSearch, IconDelete, IconEdit, IconDown, IconDownload, IconHome, IconEmail } from '@arco-design/web-react/icon';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { useStore } from '../store';
+import '@arco-design/web-react/dist/css/arco.css';
+
+const { Row, Col } = Grid;
+const FormItem = Form.Item;
 
 export const TalentPool: React.FC = () => {
+    // Use Store
+    const { talentList, loadingTalents, fetchTalents } = useStore();
+    const [filteredData, setFilteredData] = useState<any[]>([]);
+    const [form] = Form.useForm();
+    const [modalVisible, setModalVisible] = useState(false);
+    const [modalType, setModalType] = useState<'create' | 'edit'>('create');
+    const [currentRecord, setCurrentRecord] = useState<any>(null);
+    const [modalForm] = Form.useForm();
+    const [columns, setColumns] = useState<any[]>([]);
     const navigate = useNavigate();
-    const [data, setData] = useState([]);
-    const [loading, setLoading] = useState(false);
 
-    const fetchTalents = async () => {
-        setLoading(true);
-        try {
-            const res = await axios.get('http://localhost:3000/api/talent/list');
-            if (res.data.success) {
-                setData(res.data.data);
-            }
-        } catch (error) {
-            Toast.error('获取人才库数据失败');
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    // Initial Fetch (Cached)
     useEffect(() => {
         fetchTalents();
     }, []);
 
-    const columns = [
-        { title: '姓名', dataIndex: 'name' },
-        {
-            title: '评分',
-            dataIndex: 'score',
-            render: (text: number | string) => {
-                const score = Number(text);
-                return <span style={{ color: score >= 90 ? '#389e0d' : score >= 80 ? '#1890ff' : '#595959', fontWeight: 'bold' }}>{text}</span>;
-            }
-        },
-        { title: '邮箱', dataIndex: 'email' },
-        {
-            title: '状态',
-            dataIndex: 'status',
-            render: (text: string) => <Tag color="blue">{text || '新加入'}</Tag>
-        },
-        {
-            title: '操作',
-            render: (_text: any, record: any) => (
-                <Space>
-                    <Button theme='light' type='primary' size="small" onClick={() => {
-                        const initialContent = record.emailDraft
-                            ? (typeof record.emailDraft === 'string' ? record.emailDraft : record.emailDraft.content || JSON.stringify(record.emailDraft))
-                            : `${record.name} 您好，\n\n很高兴通知您，经过简历评估，我们认为您非常适合该岗位。\n\n诚挚邀请您参加面试。`;
-
-                        navigate('/dashboard/email', {
-                            state: {
-                                to: record.email,
-                                subject: record.emailDraft?.subject || `面试邀请 - ${record.name}`,
-                                content: initialContent
-                            }
-                        });
-                    }}>
-                        定制邮件
-                    </Button>
-                    <Button theme='light' type='tertiary' size="small" onClick={() => navigate('/dashboard/interview', { state: { candidate: record, questions: record.interviewQuestions } })}>
-                        面试题
-                    </Button>
-                </Space>
-            )
+    // Sync local filteredData with store data
+    useEffect(() => {
+        setFilteredData(talentList);
+        if (talentList.length > 0) {
+            generateColumns(talentList[0]);
         }
-    ];
+    }, [talentList]);
+
+    const handleRefresh = () => {
+        fetchTalents(true);
+        Message.success('Refreshing data...');
+    };
+
+    const generateColumns = (sampleItem: any) => {
+        const fixedKeys = ['candidate_name', 'phone_number', 'email', 'overall_score', 'status'];
+        const ignoredKeys = [
+            'id', 'record_id', 'interviewQuestions', 'emailDraft', 'questions_list', 'email_draft_list',
+            'created_at', 'updated_at', 'name', 'file_url', 'upsert_key', 'score'
+        ];
+
+        const fieldLabels: Record<string, string> = {
+            candidate_name: '候选人姓名',
+            overall_score: '综合评分',
+            status: '状态',
+            email: '邮箱',
+            summary: 'AI总结',
+            phone_number: '联系方式',
+            city: '城市',
+            salary_expectation: '期望薪资',
+            job_title: '应聘职位',
+            work_experience: '工作经验',
+            education: '学历',
+            grade: '优先级'
+        };
+
+        const keys = Object.keys(sampleItem).filter(k => !ignoredKeys.includes(k));
+
+        keys.sort((a, b) => {
+            const indexA = fixedKeys.indexOf(a);
+            const indexB = fixedKeys.indexOf(b);
+            if (indexA > -1 && indexB > -1) return indexA - indexB;
+            if (indexA > -1) return -1;
+            if (indexB > -1) return 1;
+            return 0;
+        });
+
+        const cols: any[] = keys.map(key => ({
+            title: fieldLabels[key] || key,
+            dataIndex: key,
+            key: key,
+            ellipsis: true,
+            render: (col: any) => {
+                if (typeof col === 'object') return JSON.stringify(col);
+                return <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={String(col)}>{col}</div>;
+            }
+        }));
+
+        cols.push({
+            title: '操作',
+            dataIndex: 'op',
+            key: 'op',
+            width: 120,
+            render: (_: any, record: any) => {
+                const dropList = (
+                    <Menu>
+                        <Menu.Item key='email' onClick={() => handleSendEmail(record)}>
+                            <IconEmail style={{ marginRight: 8 }} />
+                            发送邮件
+                        </Menu.Item>
+                        <Menu.Item key='edit' onClick={() => handleEdit(record)}>
+                            <IconEdit style={{ marginRight: 8 }} />
+                            编辑
+                        </Menu.Item>
+                        <Menu.Item key='delete' onClick={() => {
+                            Modal.confirm({
+                                title: '确认删除',
+                                content: '确定要删除这条记录吗？',
+                                onOk: () => handleDelete(record.id)
+                            });
+                        }}>
+                            <IconDelete style={{ marginRight: 8 }} />
+                            删除
+                        </Menu.Item>
+                    </Menu>
+                );
+
+                return (
+                    <Dropdown droplist={dropList} trigger={['click']} position='bl'>
+                        <Button type='secondary' size='small'>
+                            查看 <IconDown />
+                        </Button>
+                    </Dropdown>
+                );
+            },
+        });
+
+        setColumns(cols);
+    };
+
+    const handleSearch = () => {
+        const values = form.getFieldsValue();
+        const filtered = talentList.filter((item: any) => {
+            let match = true;
+            if (values.candidate_name && !item.candidate_name?.includes(values.candidate_name)) match = false;
+            if (values.email && !item.email?.includes(values.email)) match = false;
+            return match;
+        });
+        setFilteredData(filtered);
+        Message.success(`查询到 ${filtered.length} 条结果`);
+    };
+
+    const handleReset = () => {
+        form.resetFields();
+        setFilteredData(talentList);
+    };
+
+    const handleSendEmail = (record: any) => {
+        navigate('/dashboard/email', {
+            state: {
+                to: record.email,
+                content: record.email_draft_list
+            }
+        });
+    };
+
+    const handleDownload = () => {
+        if (filteredData.length === 0) {
+            Message.warning('没有数据可导出');
+            return;
+        }
+
+        // Generate CSV
+        const header = columns.filter(c => c.key !== 'op').map(c => c.title).join(',') + '\n';
+        const rows = filteredData.map(row => {
+            return columns.filter(c => c.key !== 'op').map(c => {
+                const val = row[c.dataIndex];
+                // Escape quotes and commas
+                const cell = String(val || '').replace(/"/g, '""');
+                return `"${cell}"`;
+            }).join(',');
+        }).join('\n');
+
+        const csvContent = "\uFEFF" + header + rows; // Add BOM for Excel UTF-8
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'candidates.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleCreate = () => {
+        setModalType('create');
+        setCurrentRecord(null);
+        modalForm.resetFields();
+        setModalVisible(true);
+    };
+
+    const handleEdit = (record: any) => {
+        setModalType('edit');
+        setCurrentRecord(record);
+        modalForm.setFieldsValue(record);
+        setModalVisible(true);
+    };
+
+    const handleDelete = async (id: string) => {
+        try {
+            const res = await axios.delete(`http://localhost:3000/api/talent/${id}`);
+            if (res.data.success) {
+                Message.success('删除成功');
+                fetchTalents(true);
+            } else {
+                if (res.data.message && res.data.message.includes('Permission denied')) {
+                    Message.error(res.data.message);
+                } else {
+                    Message.error('Delete failed: ' + res.data.message);
+                }
+            }
+        } catch (e) {
+            Message.error('Delete failed');
+        }
+    };
+
+    const handleModalOk = async () => {
+        try {
+            const values = await modalForm.validate();
+            if (modalType === 'create') {
+                await axios.post('http://localhost:3000/api/talent/add', values);
+                Message.success('Created successfully');
+            } else {
+                await axios.put(`http://localhost:3000/api/talent/${currentRecord.id}`, values);
+                Message.success('Updated successfully');
+            }
+            setModalVisible(false);
+            fetchTalents(true);
+        } catch (e) {
+            Message.error('Operation failed');
+        }
+    };
 
     return (
-        <div style={{ padding: 24 }}>
-            <h2>人才库管理</h2>
-            <div style={{ marginBottom: 16 }}>
-                <Button onClick={fetchTalents} loading={loading}>刷新列表</Button>
-            </div>
-            <Table columns={columns} dataSource={data} loading={loading} pagination={false} />
+        <div style={{ padding: 20 }}>
+            <Breadcrumb style={{ margin: '16px 0' }}>
+                <Breadcrumb.Item><IconHome /></Breadcrumb.Item>
+                <Breadcrumb.Item>Dashboard</Breadcrumb.Item>
+                <Breadcrumb.Item>Talent Pool</Breadcrumb.Item>
+            </Breadcrumb>
+
+            <Card className='search-form-card' style={{ marginBottom: 20 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+                    <span style={{ fontSize: 16, fontWeight: 500 }}>查询表格</span>
+                </div>
+                <Form form={form} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
+                    <Row gutter={24}>
+                        <Col span={8}>
+                            <FormItem label="姓名" field="candidate_name">
+                                <Input placeholder="请输入姓名" />
+                            </FormItem>
+                        </Col>
+                        <Col span={8}>
+                            <FormItem label="邮箱" field="email">
+                                <Input placeholder="请输入邮箱" />
+                            </FormItem>
+                        </Col>
+                        <Col span={8} style={{ textAlign: 'right' }}>
+                            <Button type="primary" icon={<IconSearch />} onClick={handleSearch} style={{ marginRight: 12 }}>查询</Button>
+                            <Button icon={<IconRefresh />} onClick={handleReset}>重置</Button>
+                        </Col>
+                    </Row>
+                </Form>
+            </Card>
+
+            <Card>
+                <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+                    <Space>
+                        <Button type="primary" icon={<IconPlus />} onClick={handleCreate}>新建</Button>
+                        <Button icon={<IconRefresh />} onClick={handleRefresh}>刷新</Button>
+                    </Space>
+                    <Button icon={<IconDownload />} onClick={handleDownload}>下载</Button>
+                </div>
+
+                <Table
+                    loading={loadingTalents}
+                    data={filteredData}
+                    columns={columns}
+                    rowKey="id"
+                    pagination={{ showTotal: true, pageSize: 10, sizeOptions: [10, 20, 50] }}
+                    border={false}
+                />
+            </Card>
+
+            <Modal
+                title={modalType === 'create' ? 'Create Candidate' : 'Edit Candidate'}
+                visible={modalVisible}
+                onOk={handleModalOk}
+                onCancel={() => setModalVisible(false)}
+                autoFocus={false}
+            >
+                <Form form={modalForm} layout="vertical">
+                    <FormItem label="Name" field="candidate_name" rules={[{ required: true }]}>
+                        <Input />
+                    </FormItem>
+                    <FormItem label="Email" field="email">
+                        <Input />
+                    </FormItem>
+                    <FormItem label="Score" field="overall_score">
+                        <Input type="number" />
+                    </FormItem>
+                    <FormItem label="Phone" field="phone_number">
+                        <Input />
+                    </FormItem>
+                    <FormItem label="Summary" field="summary">
+                        <Input.TextArea />
+                    </FormItem>
+                    <FormItem label="Status" field="status">
+                        <Select options={['待面试', '通过', '未通过']} />
+                    </FormItem>
+                </Form>
+            </Modal>
         </div>
     );
 };

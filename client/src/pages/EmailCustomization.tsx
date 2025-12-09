@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Card, Form, Button, Toast } from '@douyinfe/semi-ui';
 import axios from 'axios';
 import { useLocation } from 'react-router-dom';
+import { IconHome } from '@douyinfe/semi-icons';
+import { Breadcrumb } from '@arco-design/web-react';
+import '@arco-design/web-react/dist/css/arco.css';
 
 export const EmailCustomization: React.FC = () => {
     const [loading, setLoading] = useState(false);
@@ -38,7 +41,14 @@ export const EmailCustomization: React.FC = () => {
     };
 
     return (
-        <div style={{ maxWidth: 800, margin: '0 auto' }}>
+        <div style={{ maxWidth: 800, margin: '0 auto', padding: 20 }}>
+            <Breadcrumb style={{ margin: '16px 0' }}>
+                <Breadcrumb.Item>
+                    <IconHome />
+                </Breadcrumb.Item>
+                <Breadcrumb.Item>Dashboard</Breadcrumb.Item>
+                <Breadcrumb.Item>Email Customization</Breadcrumb.Item>
+            </Breadcrumb>
             <h2>定制个性化邮件</h2>
             <Card>
                 <Form onSubmit={handleSubmit} initValues={initialValues} key={JSON.stringify(initialValues)}>

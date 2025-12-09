@@ -10,7 +10,10 @@ export class MainController {
     static async login(req: Request, res: Response) {
         const { username, password } = req.body;
         // Mock Login
-        if (username === 'admin' && password === 'admin') {
+        const adminUser = process.env.ADMIN_USERNAME || 'admin';
+        const adminPass = process.env.ADMIN_PASSWORD || 'HRHelper2025!';
+
+        if (username === adminUser && password === adminPass) {
             res.json({ token: 'mock-jwt-token', user: { name: 'HR Manager' } });
         } else {
             res.status(401).json({ message: 'Invalid credentials' });
@@ -80,10 +83,31 @@ export class MainController {
 
     static async getTalentList(req: Request, res: Response) {
         try {
-            const list = await FeishuService.getCandidates();
-            res.json({ success: true, data: list });
+            const candidates = await FeishuService.getCandidates();
+            res.json(candidates);
         } catch (error) {
-            res.status(500).json({ message: 'Failed to fetch talents', error: String(error) });
+            res.status(500).json({ error: (error as Error).message });
+        }
+    }
+
+    static async updateCandidate(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+            const fields = req.body;
+            const result = await FeishuService.updateCandidate(id, fields);
+            res.json(result);
+        } catch (error) {
+            res.status(500).json({ error: (error as Error).message });
+        }
+    }
+
+    static async deleteCandidate(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+            const result = await FeishuService.deleteCandidate(id);
+            res.json(result);
+        } catch (error) {
+            res.status(500).json({ error: (error as Error).message });
         }
     }
 

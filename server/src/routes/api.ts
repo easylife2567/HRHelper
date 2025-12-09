@@ -8,6 +8,8 @@ router.post('/login', MainController.login);
 router.post('/analyze', upload.array('files', 10), MainController.uploadAndAnalyze);
 router.post('/talent/add', MainController.addToTalentPool);
 router.get('/talent/list', MainController.getTalentList);
+router.put('/talent/:id', MainController.updateCandidate);
+router.delete('/talent/:id', MainController.deleteCandidate);
 router.post('/email/send', MainController.sendCustomEmail);
 
 export default router;

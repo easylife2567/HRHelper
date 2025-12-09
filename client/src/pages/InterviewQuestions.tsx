@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button, List, Toast, Typography, Empty, Space } from '@douyinfe/semi-ui';
-import { IconCopy, IconDownload, IconComment } from '@douyinfe/semi-icons';
+import { IconCopy, IconDownload, IconComment, IconHome } from '@douyinfe/semi-icons';
 import { useLocation } from 'react-router-dom';
+import { Breadcrumb } from '@arco-design/web-react';
+import '@arco-design/web-react/dist/css/arco.css';
 
 const { Title, Text } = Typography;
 
@@ -55,6 +57,13 @@ export const InterviewQuestions: React.FC = () => {
 
     return (
         <div style={{ maxWidth: 800, margin: '0 auto', paddingBottom: 40 }}>
+            <Breadcrumb style={{ margin: '16px 0' }}>
+                <Breadcrumb.Item>
+                    <IconHome />
+                </Breadcrumb.Item>
+                <Breadcrumb.Item>Dashboard</Breadcrumb.Item>
+                <Breadcrumb.Item>Interview Questions</Breadcrumb.Item>
+            </Breadcrumb>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                 <Title heading={2}>个性化面试题生成</Title>
                 <Space>

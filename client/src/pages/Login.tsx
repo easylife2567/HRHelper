@@ -21,7 +21,7 @@ export const Login: React.FC = () => {
                 navigate('/dashboard/resume');
             }
         } catch {
-            Toast.error('登录失败: 用户名或密码错误 (Try admin/admin)');
+            Toast.error('登录失败: 用户名或密码错误');
         } finally {
             setLoading(false);
         }
@@ -30,9 +30,9 @@ export const Login: React.FC = () => {
     return (
         <Layout style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--semi-color-bg-1)' }}>
             <Card title="HR Helper 系统登录" style={{ width: 400, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                <Form onSubmit={handleSubmit}>
-                    <Form.Input field="username" label="用户名" placeholder="admin" rules={[{ required: true }]} />
-                    <Form.Input field="password" label="密码" type="password" placeholder="admin" rules={[{ required: true }]} />
+                <Form onSubmit={handleSubmit} autoComplete="off">
+                    <Form.Input field="username" label="用户名" autoComplete="off" rules={[{ required: true }]} />
+                    <Form.Input field="password" label="密码" type="password" autoComplete="new-password" rules={[{ required: true }]} />
                     <Button htmlType="submit" type="primary" theme="solid" block loading={loading} style={{ marginTop: 20 }}>登录</Button>
                 </Form>
             </Card>
