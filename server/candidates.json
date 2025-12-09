@@ -1,0 +1,13 @@
+[
+  {
+    "name": "陈亦辰",
+    "email": "chenyichen@example.com",
+    "score": 85,
+    "summary": "AI自动评估",
+    "emailDraft": {
+      "subject": null
+    },
+    "created_at": "2025-12-09T10:48:43.598Z",
+    "status": "待面试"
+  }
+]

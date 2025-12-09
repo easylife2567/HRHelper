@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Card, Grid, Space, Button, Avatar, Statistic, Tag, List, Skeleton, Spin } from '@arco-design/web-react';
+import { Typography, Card, Grid, Space, Button, Statistic, Tag, List, Spin } from '@arco-design/web-react';
 import { IconUser, IconUserGroup, IconCheckCircle, IconCloseCircle, IconClockCircle, IconRight, IconSafe, IconEmail, IconFile } from '@arco-design/web-react/icon';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store';

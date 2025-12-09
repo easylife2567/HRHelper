@@ -166,19 +166,27 @@ export const ResumeEvaluation: React.FC = () => {
     };
 
     return (
-        <div style={{ maxWidth: 1200, margin: '0 auto', paddingBottom: 40 }}>
-            <Breadcrumb style={{ margin: '16px 0' }}>
-                <Breadcrumb.Item>
-                    <IconHome />
-                </Breadcrumb.Item>
-                <Breadcrumb.Item>Dashboard</Breadcrumb.Item>
-                <Breadcrumb.Item>Resume Evaluation</Breadcrumb.Item>
-            </Breadcrumb>
-            <Title heading={2} style={{ marginBottom: 24 }}>简历评估</Title>
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ marginBottom: 16 }}>
+                <Breadcrumb>
+                    <Breadcrumb.Item>
+                        <IconHome />
+                    </Breadcrumb.Item>
+                    <Breadcrumb.Item>Dashboard</Breadcrumb.Item>
+                    <Breadcrumb.Item>Resume Evaluation</Breadcrumb.Item>
+                </Breadcrumb>
+                <Title heading={3} style={{ marginTop: 12 }}>简历智能评估</Title>
+            </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 24 }}>
-                <Card title="上传与配置">
-                    <Text strong style={{ display: 'block', marginBottom: 8 }}>1. 上传简历 (PDF/Word, 最多10份)</Text>
+            <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: 24, flex: 1, minHeight: 0 }}>
+                {/* Left Panel: Configuration */}
+                <Card
+                    title="配置与上传"
+                    style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+                    bodyStyle={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 20, overflowY: 'auto' }}
+                    headerStyle={{ padding: '16px 20px' }}
+                >
+                    <Text strong style={{ display: 'block', marginBottom: 12 }}>1. 候选人简历</Text>
                     <Upload
                         action=""
                         beforeUpload={() => false}
@@ -186,82 +194,111 @@ export const ResumeEvaluation: React.FC = () => {
                         limit={10}
                         multiple
                         draggable
+                        dragMainText="点击或拖拽上传文件"
+                        dragSubText="支持 PDF/Word，最多 10 份"
+                        style={{ width: '100%' }}
                     >
-                        <div style={{ padding: 20, textAlign: 'center', border: '1px dashed var(--semi-color-border)', cursor: 'pointer' }}>
-                            <IconUpload size="extra-large" />
-                            <Text style={{ display: 'block', marginTop: 8 }}>点击或拖拽上传简历</Text>
+                        <div style={{
+                            padding: '32px 0',
+                            textAlign: 'center',
+                            backgroundColor: 'var(--semi-color-fill-0)',
+                            border: '1px dashed var(--semi-color-border)',
+                            borderRadius: 'var(--semi-border-radius-medium)',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s'
+                        }}>
+                            <IconUpload size="extra-large" style={{ color: 'var(--semi-color-text-2)', marginBottom: 8 }} />
+                            <div style={{ color: 'var(--semi-color-text-1)', fontWeight: 500 }}>点击或拖拽上传</div>
+                            <div style={{ color: 'var(--semi-color-text-3)', fontSize: 12, marginTop: 4 }}>支持 PDF / Word</div>
                         </div>
                     </Upload>
 
-                    <Text strong style={{ display: 'block', marginTop: 24, marginBottom: 8 }}>2. 职位描述 (JD)</Text>
+                    <Text strong style={{ display: 'block', marginTop: 24, marginBottom: 12 }}>2. 职位描述 (JD)</Text>
                     <TextArea
-                        rows={10}
+                        style={{ flex: 1, resize: 'none', minHeight: 120 }} // Allow it to fill remaining space
                         value={jobDescription}
                         onChange={(val) => setJobDescription(val)}
-                        placeholder="请输入职位描述..."
+                        placeholder="请粘贴详细的职位描述，以便AI更精准地匹配..."
+                        showClear
                     />
 
                     <Button
                         theme="solid"
                         type="primary"
-                        style={{ marginTop: 24 }}
+                        style={{ marginTop: 24, height: 48, fontSize: 16, fontWeight: 600 }}
                         block
                         loading={loading}
                         onClick={handleAnalyze}
-                        size="large"
                     >
-                        开始智能评估
+                        {loading ? 'AI 正在分析...' : '开始智能评估'}
                     </Button>
                 </Card>
 
+                {/* Right Panel: Results */}
                 <Card
-                    title="评估结果"
-                    headerExtraContent={report && <Button icon={<IconDelete />} theme="light" type="danger" onClick={handleClear}>清除结果</Button>}
-                    style={{ minHeight: 600, overflow: 'auto' }}
+                    title={
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span>评估报告</span>
+                            {report && <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)', fontWeight: 'normal' }}>已生成</span>}
+                        </div>
+                    }
+                    headerExtraContent={report && <Button icon={<IconDelete />} theme="light" type="danger" onClick={handleClear} size="small">清除</Button>}
+                    style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+                    bodyStyle={{ flex: 1, overflow: 'hidden', padding: 0, position: 'relative' }} // Constraint overflow here
+                    headerStyle={{ padding: '16px 24px' }}
                 >
-                    {loading && (
-                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
-                            <Spin size="large" tip="正在调用AI工作流进行分析..." />
-                        </div>
-                    )}
+                    {/* Scrollable Content Area */}
+                    <div style={{ height: '100%', overflowY: 'auto', padding: 24 }}>
+                        {loading && (
+                            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'var(--semi-color-text-2)' }}>
+                                <Spin size="large" />
+                                <p style={{ marginTop: 24 }}>正在调用 AI 工作流进行深度分析...</p>
+                                <p style={{ fontSize: 12, opacity: 0.6 }}>耗时可能需要 30-60 秒，请耐心等待</p>
+                            </div>
+                        )}
 
-                    {!loading && !report && (
-                        <div style={{ textAlign: 'center', color: 'var(--semi-color-text-2)', marginTop: 100 }}>
-                            <IconFile size="extra-large" />
-                            <p>暂无分析结果</p>
-                        </div>
-                    )}
+                        {!loading && !report && (
+                            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'var(--semi-color-text-3)' }}>
+                                <div style={{ width: 120, height: 120, background: 'var(--semi-color-fill-0)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
+                                    <IconFile style={{ fontSize: 48 }} />
+                                </div>
+                                <Title heading={5} style={{ color: 'var(--semi-color-text-2)' }}>暂无分析结果</Title>
+                                <Text type="tertiary" style={{ marginTop: 8 }}>请在左侧上传简历并填写 JD 后点击开始</Text>
+                            </div>
+                        )}
 
-                    {!loading && report && (
-                        <div className="markdown-body" style={{ padding: '0 10px' }}>
-                            <ReactMarkdown
-                                remarkPlugins={[remarkGfm]}
-                                components={{
-                                    table: ({ node, ...props }) => (
-                                        <div style={{ overflowX: 'auto', margin: '16px 0', border: '1px solid var(--semi-color-border)', borderRadius: 4 }}>
-                                            <table {...props} style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }} />
-                                        </div>
-                                    ),
-                                    thead: ({ node, ...props }) => (
-                                        <thead {...props} style={{ background: 'var(--semi-color-fill-0)' }} />
-                                    ),
-                                    th: ({ node, ...props }) => (
-                                        <th {...props} style={{ padding: '12px 16px', borderBottom: '1px solid var(--semi-color-border)', textAlign: 'left', fontWeight: 600, color: 'var(--semi-color-text-0)' }} />
-                                    ),
-                                    td: ({ node, ...props }) => (
-                                        <td {...props} style={{ padding: '12px 16px', borderBottom: '1px solid var(--semi-color-border)', color: 'var(--semi-color-text-1)' }} />
-                                    ),
-                                    h1: ({ node, ...props }) => <h1 {...props} style={{ margin: '24px 0 16px', fontSize: 24, fontWeight: 600, borderBottom: '1px solid var(--semi-color-border)', paddingBottom: 8 }} />,
-                                    h2: ({ node, ...props }) => <h2 {...props} style={{ margin: '20px 0 12px', fontSize: 20, fontWeight: 600, color: 'var(--semi-color-text-0)' }} />,
-                                    h3: ({ node, ...props }) => <h3 {...props} style={{ margin: '16px 0 8px', fontSize: 16, fontWeight: 600 }} />,
-                                    p: ({ node, ...props }) => <p {...props} style={{ margin: '0 0 12px', lineHeight: 1.6, color: 'var(--semi-color-text-1)' }} />,
-                                    li: ({ node, ...props }) => <li {...props} style={{ marginBottom: 4, lineHeight: 1.6 }} />,
-                                }}
-                            >
-                                {report}
-                            </ReactMarkdown>
-                        </div>
-                    )}
+                        {!loading && report && (
+                            <div className="markdown-body">
+                                <ReactMarkdown
+                                    remarkPlugins={[remarkGfm]}
+                                    components={{
+                                        table: ({ node, ...props }) => (
+                                            <div style={{ overflowX: 'auto', margin: '16px 0', border: '1px solid var(--semi-color-border)', borderRadius: 8 }}>
+                                                <table {...props} style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }} />
+                                            </div>
+                                        ),
+                                        thead: ({ node, ...props }) => (
+                                            <thead {...props} style={{ background: 'var(--semi-color-fill-0)' }} />
+                                        ),
+                                        th: ({ node, ...props }) => (
+                                            <th {...props} style={{ padding: '14px 16px', borderBottom: '1px solid var(--semi-color-border)', textAlign: 'left', fontWeight: 600, color: 'var(--semi-color-text-0)', whiteSpace: 'nowrap' }} />
+                                        ),
+                                        td: ({ node, ...props }) => (
+                                            <td {...props} style={{ padding: '14px 16px', borderBottom: '1px solid var(--semi-color-border)', color: 'var(--semi-color-text-1)' }} />
+                                        ),
+                                        h1: ({ node, ...props }) => <h1 {...props} style={{ margin: '32px 0 20px', fontSize: 28, fontWeight: 700, paddingBottom: 12, borderBottom: '1px solid var(--semi-color-border)' }} />,
+                                        h2: ({ node, ...props }) => <h2 {...props} style={{ margin: '28px 0 16px', fontSize: 22, fontWeight: 600, color: 'var(--semi-color-text-0)', display: 'flex', alignItems: 'center' }}>{props.children}</h2>,
+                                        h3: ({ node, ...props }) => <h3 {...props} style={{ margin: '20px 0 12px', fontSize: 18, fontWeight: 600 }} />,
+                                        p: ({ node, ...props }) => <p {...props} style={{ margin: '0 0 16px', lineHeight: 1.7, color: 'var(--semi-color-text-1)', fontSize: 15 }} />,
+                                        ul: ({ node, ...props }) => <ul {...props} style={{ paddingLeft: 24, marginBottom: 16 }} />,
+                                        li: ({ node, ...props }) => <li {...props} style={{ marginBottom: 8, lineHeight: 1.7 }} />,
+                                    }}
+                                >
+                                    {report}
+                                </ReactMarkdown>
+                            </div>
+                        )}
+                    </div>
                 </Card>
             </div>
         </div>
