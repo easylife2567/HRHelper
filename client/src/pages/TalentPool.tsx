@@ -157,10 +157,35 @@ export const TalentPool: React.FC = () => {
     };
 
     const handleSendEmail = (record: any) => {
+        // Prefer the parsed 'emailDraft' object if available
+        let subject = '';
+        let content = '';
+
+        if (record.emailDraft) {
+            subject = record.emailDraft.subject || '';
+            content = record.emailDraft.content || record.emailDraft.text || '';
+        } else if (record.email_draft_list) {
+            // Fallback: try to parse if it's a string (though it should be parsed by getCandidates)
+            try {
+                const parsed = typeof record.email_draft_list === 'string' ? JSON.parse(record.email_draft_list) : record.email_draft_list;
+                subject = parsed.subject || '';
+                content = parsed.content || parsed.text || '';
+            } catch (e) {
+                console.warn('Failed to parse email draft', e);
+            }
+        }
+
+        // If no draft found, use default rejection message
+        if (!subject && !content) {
+            subject = '关于您的应聘反馈';
+            content = '该候选人未能通过简历筛选';
+        }
+
         navigate('/dashboard/email', {
             state: {
                 to: record.email,
-                content: record.email_draft_list
+                subject: subject,
+                content: content
             }
         });
     };
@@ -243,14 +268,14 @@ export const TalentPool: React.FC = () => {
     };
 
     return (
-        <div style={{ padding: 20 }}>
-            <Breadcrumb style={{ margin: '16px 0' }}>
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <Breadcrumb style={{ margin: '0 0 16px 0', flexShrink: 0 }}>
                 <Breadcrumb.Item><IconHome /></Breadcrumb.Item>
                 <Breadcrumb.Item>Dashboard</Breadcrumb.Item>
                 <Breadcrumb.Item>Talent Pool</Breadcrumb.Item>
             </Breadcrumb>
 
-            <Card className='search-form-card' style={{ marginBottom: 20 }}>
+            <Card className='search-form-card' style={{ marginBottom: 20, flexShrink: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
                     <span style={{ fontSize: 16, fontWeight: 500 }}>查询表格</span>
                 </div>
@@ -274,8 +299,12 @@ export const TalentPool: React.FC = () => {
                 </Form>
             </Card>
 
-            <Card>
-                <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+            <Card
+                className="table-card"
+                style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}
+                bodyStyle={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '16px 24px' }}
+            >
+                <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
                     <Space>
                         <Button type="primary" icon={<IconPlus />} onClick={handleCreate}>新建</Button>
                         <Button icon={<IconRefresh />} onClick={handleRefresh}>刷新</Button>
@@ -283,14 +312,18 @@ export const TalentPool: React.FC = () => {
                     <Button icon={<IconDownload />} onClick={handleDownload}>下载</Button>
                 </div>
 
-                <Table
-                    loading={loadingTalents}
-                    data={filteredData}
-                    columns={columns}
-                    rowKey="id"
-                    pagination={{ showTotal: true, pageSize: 10, sizeOptions: [10, 20, 50] }}
-                    border={false}
-                />
+                <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                    <Table
+                        loading={loadingTalents}
+                        data={filteredData}
+                        columns={columns}
+                        rowKey="id"
+                        pagination={{ showTotal: true, pageSize: 10, sizeOptions: [10, 20, 50] }}
+                        border={false}
+                        scroll={{ y: true }}
+                        style={{ height: '100%' }}
+                    />
+                </div>
             </Card>
 
             <Modal

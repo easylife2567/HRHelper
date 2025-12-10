@@ -49,40 +49,73 @@ export class FeishuService {
             const token = await this.getTenantAccessToken();
             if (!token) return this.loadLocalCandidates();
 
-            // Sort by created_time DESC (system field)
-            const res = await axios.get(`https://open.feishu.cn/open-apis/bitable/v1/apps/${FEISHU_APP_TOKEN}/tables/${FEISHU_TABLE_ID}/records?page_size=100&sort=["created_time DESC"]`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            // Fetch views to get the default view order
+            const views = await this.getViews(token);
+            const viewId = views.length > 0 ? views[0].view_id : undefined;
 
-            if (res.data.data && res.data.data.items) {
-                const mappedItems = res.data.data.items.map((item: any) => {
-                    const f = item.fields;
-                    // Safely parse JSON fields if needed, but for general table view, raw fields are good.
-                    // We still parse specific known fields for backward compatibility with other pages
-                    let questions = undefined;
-                    let emailDraft = undefined;
-                    try { questions = f["questions_list"] ? JSON.parse(f["questions_list"]) : (f["面试题"] ? JSON.parse(f["面试题"]) : undefined); } catch { }
-                    try { emailDraft = f["email_draft_list"] ? JSON.parse(f["email_draft_list"]) : (f["邮件内容"] ? JSON.parse(f["邮件内容"]) : undefined); } catch { }
+            let allItems: any[] = [];
+            let pageToken = '';
+            let hasMore = true;
 
-                    return {
-                        ...f, // Spread all raw fields for the generic table view
-                        // Standardized fields for app logic
-                        name: f["candidate_name"] || f["姓名"],
-                        email: f["email"] || f["邮箱"],
-                        score: f["overall_score"] || f["评分"],
-                        summary: f["summary"] || f["总结"],
-                        interviewQuestions: questions,
-                        emailDraft: emailDraft,
-                        status: f["status"] || '待面试',
-                        id: item.record_id,
-                        created_at: item.created_time
-                    };
+            while (hasMore) {
+                const url = `https://open.feishu.cn/open-apis/bitable/v1/apps/${FEISHU_APP_TOKEN}/tables/${FEISHU_TABLE_ID}/records?page_size=100${viewId ? `&view_id=${viewId}` : ''}${pageToken ? `&page_token=${pageToken}` : ''}`;
+                const res = await axios.get(url, {
+                    headers: { Authorization: `Bearer ${token}` }
                 });
 
-                // Explicitly sort by created_at descending (newest first)
-                return mappedItems.sort((a: any, b: any) => b.created_at - a.created_at);
+                if (res.data.data && res.data.data.items) {
+                    allItems = allItems.concat(res.data.data.items);
+                    hasMore = res.data.data.has_more;
+                    pageToken = res.data.data.page_token;
+                } else {
+                    hasMore = false;
+                }
             }
-            return [];
+
+            const mappedItems = allItems.map((item: any) => {
+                const f = item.fields;
+                // Safely parse JSON fields if needed, but for general table view, raw fields are good.
+                // We still parse specific known fields for backward compatibility with other pages
+                let questions = undefined;
+                let emailDraft = undefined;
+                try { questions = f["questions_list"] ? JSON.parse(f["questions_list"]) : (f["面试题"] ? JSON.parse(f["面试题"]) : undefined); } catch { }
+                try { emailDraft = f["email_draft_list"] ? JSON.parse(f["email_draft_list"]) : (f["邮件内容"] ? JSON.parse(f["邮件内容"]) : undefined); } catch { }
+
+                return {
+                    ...f, // Spread all raw fields for the generic table view
+                    // Standardized fields for app logic
+                    name: f["candidate_name"] || f["姓名"],
+                    email: f["email"] || f["邮箱"],
+                    score: f["overall_score"] || f["评分"],
+                    summary: f["summary"] || f["总结"],
+                    interviewQuestions: questions,
+                    emailDraft: emailDraft,
+                    status: f["status"] || '待面试',
+                    id: item.record_id,
+                    created_at: item.created_time
+                };
+            });
+
+            // Merge with local data to get rich fields (interviewQuestions, emailDraft) which are not stored in Feishu
+            const localCandidates = this.loadLocalCandidates();
+            const mergedItems = mappedItems.map((feishuItem: any) => {
+                const localMatch = localCandidates.find((c: any) =>
+                    (c.email && c.email === feishuItem.email) ||
+                    (c.name && c.name === feishuItem.name)
+                );
+
+                if (localMatch) {
+                    return {
+                        ...feishuItem,
+                        interviewQuestions: localMatch.interviewQuestions || feishuItem.interviewQuestions,
+                        emailDraft: localMatch.emailDraft || feishuItem.emailDraft
+                    };
+                }
+                return feishuItem;
+            });
+
+            return mergedItems;
+
         } catch (e) {
             console.error('Feishu Fetch Failed, falling back to local:', (e as Error).message);
             return this.loadLocalCandidates();
@@ -161,8 +194,6 @@ export class FeishuService {
             "overall_score": data.score,
             "email": data.email,
             "summary": data.summary,
-            "questions_list": data.interviewQuestions ? JSON.stringify(data.interviewQuestions) : "",
-            "email_draft_list": data.emailDraft ? JSON.stringify(data.emailDraft) : "",
             "status": "待面试"
         };
 
@@ -173,6 +204,23 @@ export class FeishuService {
         });
     }
 
+    // 获取多维表格的数据，按照视图的排序规则返回数据
+    private static async getViews(token: string) {
+        try {
+            const res = await axios.get(`https://open.feishu.cn/open-apis/bitable/v1/apps/${FEISHU_APP_TOKEN}/tables/${FEISHU_TABLE_ID}/views`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.code === 0 && res.data.data.items) {
+                return res.data.data.items;
+            }
+            return [];
+        } catch (e) {
+            console.error('Failed to get views:', (e as Error).message);
+            return [];
+        }
+    }
+
+    // 获取tenant_access_token
     private static async getTenantAccessToken() {
         try {
             const res = await axios.post('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', {

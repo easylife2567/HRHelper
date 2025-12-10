@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Form, Button, Toast, List, Typography } from '@douyinfe/semi-ui';
+import { Card, Form, Input, Button, Message, List, Typography, Breadcrumb } from '@arco-design/web-react';
 import axios from 'axios';
 import { useLocation } from 'react-router-dom';
-import { IconHome, IconMail, IconTemplate, IconSend, IconEdit } from '@douyinfe/semi-icons';
-import { Breadcrumb } from '@arco-design/web-react';
+import { IconHome, IconEmail, IconApps, IconSend, IconEdit } from '@arco-design/web-react/icon';
 import '@arco-design/web-react/dist/css/arco.css';
 
 const { Title, Text } = Typography;
+const FormItem = Form.Item;
+const TextArea = Input.TextArea;
 
 const TEMPLATES = [
     {
@@ -32,7 +33,7 @@ const TEMPLATES = [
 export const EmailCustomization: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const location = useLocation();
-    const [formApi, setFormApi] = useState<any>();
+    const [form] = Form.useForm();
     const [initialValues, setInitialValues] = useState({ to: '', subject: '', content: '' });
 
     useEffect(() => {
@@ -44,125 +45,152 @@ export const EmailCustomization: React.FC = () => {
                 content: content || ''
             };
             setInitialValues(values);
-            formApi?.setValues(values);
+            form.setFieldsValue(values);
         }
-    }, [location.state, formApi]);
+    }, [location.state, form]);
 
     const handleApplyTemplate = (tpl: typeof TEMPLATES[0]) => {
-        const currentValues = formApi?.getValues() || {};
-        formApi?.setValues({
+        const currentValues = form.getFieldsValue() || {};
+        form.setFieldsValue({
             ...currentValues,
             subject: tpl.subject,
             content: tpl.content
         });
-        Toast.success(`已应用模板：${tpl.title}`);
+        Message.success(`已应用模板：${tpl.title}`);
     };
 
     const handleSubmit = async (values: any) => {
         setLoading(true);
         try {
             await axios.post('http://localhost:3000/api/email/send', values);
-            Toast.success('邮件发送成功');
+            Message.success('邮件发送成功');
         } catch {
-            Toast.error('发送失败');
+            Message.error('发送失败');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '24px 24px 0 24px' }}>
-                <Breadcrumb>
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div>
+                <Breadcrumb style={{ margin: '16px 0' }}>
                     <Breadcrumb.Item>
                         <IconHome />
                     </Breadcrumb.Item>
                     <Breadcrumb.Item>Dashboard</Breadcrumb.Item>
                     <Breadcrumb.Item>Email Customization</Breadcrumb.Item>
                 </Breadcrumb>
-                <Title heading={3} style={{ marginTop: 12, marginBottom: 16 }}>邮件定制</Title>
+                <Title heading={3} style={{ marginTop: 0, marginBottom: 16 }}>邮件定制</Title>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 24, padding: '0 24px 24px 24px', flex: 1, minHeight: 0 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 24, flex: 1, minHeight: 0 }}>
                 {/* Left: Template Library */}
                 <Card
-                    title={<div style={{ display: 'flex', alignItems: 'center' }}><IconTemplate style={{ marginRight: 8 }} /> 模板库</div>}
+                    title={<div style={{ display: 'flex', alignItems: 'center' }}><IconApps style={{ marginRight: 8 }} /> 模板库</div>}
                     style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
-                    bodyStyle={{ padding: 12, flex: 1, overflowY: 'auto' }}
+                    bodyStyle={{ padding: 16, flex: 1, overflowY: 'auto', backgroundColor: 'var(--color-fill-1)' }}
                 >
                     <List
                         dataSource={TEMPLATES}
-                        renderItem={(item) => (
-                            <List.Item
+                        render={(item) => (
+                            <div
+                                key={item.id}
                                 style={{
-                                    padding: '12px 16px',
+                                    padding: '16px',
                                     cursor: 'pointer',
-                                    borderRadius: 6,
-                                    marginBottom: 8,
-                                    border: '1px solid var(--semi-color-border)',
+                                    borderRadius: 8,
+                                    marginBottom: 12,
+                                    backgroundColor: 'var(--color-bg-2)',
+                                    border: '1px solid var(--color-border)',
                                     transition: 'all 0.2s',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
                                 }}
                                 onClick={() => handleApplyTemplate(item)}
-                                className="template-item"
-                                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--semi-color-fill-0)'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.borderColor = 'rgb(var(--primary-6))';
+                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                    e.currentTarget.style.boxShadow = '0 4px 10px rgba(0,0,0,0.05)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.borderColor = 'var(--color-border)';
+                                    e.currentTarget.style.transform = 'none';
+                                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)';
+                                }}
                             >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                                    <Text strong>{item.title}</Text>
-                                    <IconEdit style={{ color: 'var(--semi-color-text-2)' }} />
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                    <Text bold style={{ fontSize: 15 }}>{item.title}</Text>
+                                    <Button size="mini" shape="circle" icon={<IconEdit />} />
                                 </div>
-                                <Text type="secondary" ellipsis={{ showTooltip: true }} style={{ fontSize: 12, marginTop: 4 }}>
+                                <Text
+                                    type="secondary"
+                                    style={{
+                                        fontSize: 13,
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden',
+                                        lineHeight: 1.5
+                                    }}
+                                >
                                     {item.subject}
                                 </Text>
-                            </List.Item>
+                            </div>
                         )}
+                        bordered={false}
                     />
                 </Card>
 
                 {/* Right: Email Editor */}
                 <Card
-                    title={<div style={{ display: 'flex', alignItems: 'center' }}><IconMail style={{ marginRight: 8 }} /> 邮件编辑</div>}
+                    title={<div style={{ display: 'flex', alignItems: 'center' }}><IconEmail style={{ marginRight: 8 }} /> 邮件编辑</div>}
                     style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
-                    bodyStyle={{ padding: 24, flex: 1, overflowY: 'auto' }}
+                    bodyStyle={{ padding: 24, flex: 1, overflowY: 'hidden', display: 'flex', flexDirection: 'column' }}
                 >
                     <Form
-                        getFormApi={setFormApi}
+                        form={form}
                         onSubmit={handleSubmit}
-                        initValues={initialValues}
+                        initialValues={initialValues}
+                        layout="vertical"
                         style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
                     >
-                        <Form.Input
-                            field="to"
-                            label="收件人邮箱"
-                            placeholder="candidate@example.com"
-                            trigger="blur"
-                            rules={[{ required: true, type: 'email' }]}
-                        />
-                        <Form.Input
-                            field="subject"
-                            label="邮件主题"
-                            placeholder="请输入邮件主题"
-                            trigger="blur"
-                            rules={[{ required: true }]}
-                        />
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                            <Form.TextArea
-                                field="content"
-                                label="邮件正文"
-                                placeholder="请输入邮件内容..."
-                                rules={[{ required: true }]}
-                                style={{ height: '100%', fontFamily: 'monospace', resize: 'none' }}
-                                rows={15} // Fallback height
-                            />
+                        <div style={{ display: 'flex', gap: 24 }}>
+                            <FormItem field="to" label="收件人邮箱" rules={[{ required: true, type: 'email', message: '请输入有效的邮箱地址' }]} style={{ flex: 1 }}>
+                                <Input prefix={<IconEmail />} placeholder="candidate@example.com" />
+                            </FormItem>
+                            <FormItem field="subject" label="邮件主题" rules={[{ required: true, message: '请输入邮件主题' }]} style={{ flex: 1 }}>
+                                <Input placeholder="请输入邮件主题" />
+                            </FormItem>
                         </div>
-                        <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
+
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, marginBottom: 24 }}>
+                            <div style={{ marginBottom: 8, color: 'var(--color-text-2)', fontSize: 14 }}>邮件正文</div>
+                            <FormItem field="content" rules={[{ required: true, message: '请输入邮件内容' }]} noStyle wrapperCol={{ style: { flex: 1, display: 'flex', flexDirection: 'column' } }}>
+                                <TextArea
+                                    placeholder="请输入邮件内容..."
+                                    style={{
+                                        flex: 1,
+                                        fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+                                        resize: 'none',
+                                        padding: 16,
+                                        fontSize: 14,
+                                        lineHeight: 1.6,
+                                        border: '1px solid var(--color-border)',
+                                        borderRadius: 4,
+                                        backgroundColor: 'var(--color-fill-1)'
+                                    }}
+                                />
+                            </FormItem>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--color-border)', paddingTop: 16 }}>
                             <Button
-                                htmlType="submit"
                                 type="primary"
-                                theme="solid"
+                                htmlType="submit"
                                 icon={<IconSend />}
                                 loading={loading}
                                 size="large"
+                                style={{ padding: '0 32px' }}
                             >
                                 发送邮件
                             </Button>
