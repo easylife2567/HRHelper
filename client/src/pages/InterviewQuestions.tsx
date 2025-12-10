@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, Button, List, Message, Typography, Empty, Space, Breadcrumb, Menu, Badge, Avatar, Input } from '@arco-design/web-react';
+import { Card, Button, Message, Typography, Empty, Space, Breadcrumb, Menu, Badge, Avatar, Input } from '@arco-design/web-react';
 import { IconCopy, IconDownload, IconMessage, IconHome, IconUser, IconSearch } from '@arco-design/web-react/icon';
 import { useLocation } from 'react-router-dom';
 import { useStore } from '../store';
 import '@arco-design/web-react/dist/css/arco.css';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 const MenuItem = Menu.Item;
 
 export const InterviewQuestions: React.FC = () => {
@@ -176,7 +176,7 @@ export const InterviewQuestions: React.FC = () => {
                 {/* Right Content: Questions */}
                 <Card
                     style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
-                    bodyStyle={{ flex: 1, overflowY: 'hidden', display: 'flex', flexDirection: 'column', padding: 0 }}
+                    bodyStyle={{ flex: 1, overflow: 'hidden', padding: 0, position: 'relative' }}
                     title={
                         currentCandidate ? (
                             <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -192,69 +192,82 @@ export const InterviewQuestions: React.FC = () => {
                         </Space>
                     }
                 >
-                    <div style={{ flex: 1, overflowY: 'auto', padding: '32px 60px 80px 60px' }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflowY: 'auto', padding: '32px 40px 100px 40px', backgroundColor: 'var(--color-fill-1)' }}>
                         {!currentCandidate ? (
-                            <Empty
-                                icon={<IconUser style={{ fontSize: 64, color: 'var(--color-text-3)' }} />}
-                                description="请从左侧选择一位候选人以查看面试题"
-                                style={{ paddingTop: 120 }}
-                            />
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                                <IconUser style={{ fontSize: 64, color: 'var(--color-text-3)', marginBottom: 16 }} />
+                                <Text style={{ color: 'var(--color-text-3)', fontSize: 16 }}>请从左侧选择一位候选人以查看面试题</Text>
+                            </div>
                         ) : questions.length === 0 ? (
-                            <Empty
-                                icon={<IconMessage style={{ fontSize: 64, color: 'var(--color-text-3)' }} />}
-                                description="该候选人暂无生成的面试题"
-                                style={{ paddingTop: 120 }}
-                            />
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                                <IconMessage style={{ fontSize: 64, color: 'var(--color-text-3)', marginBottom: 16 }} />
+                                <Text style={{ color: 'var(--color-text-3)', fontSize: 16 }}>该候选人暂无生成的面试题</Text>
+                            </div>
                         ) : (
-                            <List
-                                dataSource={questions}
-                                render={(item: any, index) => (
-                                    <List.Item key={index} style={{ padding: '40px 0', borderBottom: '1px solid var(--color-border)' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                                {questions.map((item: any, index: number) => (
+                                    <div
+                                        key={index}
+                                        style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: 12,
+                                            padding: '24px 32px',
+                                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+                                            border: '1px solid var(--color-border)'
+                                        }}
+                                    >
                                         {typeof item === 'string' ? (
                                             <div style={{ fontSize: 17, lineHeight: 1.8, color: 'var(--color-text-1)' }}>{item}</div>
                                         ) : (
-                                            <div style={{ width: '100%' }}>
-                                                <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 20 }}>
-                                                    <span style={{
-                                                        display: 'inline-flex',
-                                                        justifyContent: 'center',
-                                                        alignItems: 'center',
-                                                        width: 36,
-                                                        height: 36,
-                                                        borderRadius: '50%',
-                                                        background: 'rgb(var(--primary-6))',
-                                                        color: '#fff',
-                                                        marginRight: 24,
-                                                        fontSize: 18,
-                                                        fontWeight: 'bold',
-                                                        flexShrink: 0,
-                                                        boxShadow: '0 4px 10px rgba(var(--primary-6), 0.3)',
-                                                        marginTop: 2 // Visual alignment with text cap height
-                                                    }}>{index + 1}</span>
-                                                    <Text bold style={{ fontSize: 20, lineHeight: 1.6, color: 'var(--color-text-1)', marginTop: 0 }}>{item.question}</Text>
+                                            <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+                                                {/* Number Badge */}
+                                                <div style={{
+                                                    display: 'flex',
+                                                    justifyContent: 'center',
+                                                    alignItems: 'center',
+                                                    width: 40,
+                                                    height: 40,
+                                                    borderRadius: '50%',
+                                                    background: 'linear-gradient(135deg, rgb(var(--primary-5)), rgb(var(--primary-7)))',
+                                                    color: '#fff',
+                                                    marginRight: 24,
+                                                    fontSize: 20,
+                                                    fontWeight: 'bold',
+                                                    flexShrink: 0,
+                                                    boxShadow: '0 4px 10px rgba(var(--primary-6), 0.3)',
+                                                    marginTop: 2
+                                                }}>
+                                                    {index + 1}
                                                 </div>
 
-                                                <div style={{ paddingLeft: 60 }}>
+                                                {/* Content */}
+                                                <div style={{ flex: 1 }}>
+                                                    <Text bold style={{ fontSize: 18, lineHeight: 1.6, color: 'var(--color-text-1)', display: 'block', marginBottom: 12 }}>
+                                                        {item.question}
+                                                    </Text>
+
                                                     <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
-                                                        {item.category && <span style={{ padding: '4px 12px', background: 'var(--color-fill-2)', borderRadius: 6, fontSize: 13, color: 'var(--color-text-2)', fontWeight: 500 }}>类别: {item.category}</span>}
-                                                        {item.difficulty && <span style={{ padding: '4px 12px', background: 'var(--color-fill-2)', borderRadius: 6, fontSize: 13, color: 'var(--color-text-2)', fontWeight: 500 }}>难度: {item.difficulty}</span>}
+                                                        {item.category && <span style={{ padding: '4px 12px', background: 'var(--color-fill-2)', borderRadius: 20, fontSize: 12, color: 'var(--color-text-2)', border: '1px solid var(--color-border-2)' }}>类别: {item.category}</span>}
+                                                        {item.difficulty && <span style={{ padding: '4px 12px', background: 'var(--color-fill-2)', borderRadius: 20, fontSize: 12, color: 'var(--color-text-2)', border: '1px solid var(--color-border-2)' }}>难度: {item.difficulty}</span>}
                                                     </div>
 
                                                     {item.rationale && (
-                                                        <div style={{ background: 'var(--color-bg-2)', padding: '24px', borderRadius: 12, border: '1px solid var(--color-border)' }}>
+                                                        <div style={{ background: 'var(--color-fill-1)', padding: '16px 20px', borderRadius: 8 }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-                                                                <div style={{ width: 4, height: 16, background: 'rgb(var(--primary-6))', borderRadius: 2, marginRight: 8 }}></div>
-                                                                <Text style={{ fontWeight: 'bold', fontSize: 14, color: 'var(--color-text-1)' }}>考察点 / 评分标准</Text>
+                                                                <div style={{ width: 4, height: 14, background: 'rgb(var(--primary-6))', borderRadius: 2, marginRight: 8 }}></div>
+                                                                <Text style={{ fontWeight: 'bold', fontSize: 13, color: 'var(--color-text-2)' }}>考察点 / 评分标准</Text>
                                                             </div>
-                                                            <Text style={{ color: 'var(--color-text-2)', lineHeight: 1.8, fontSize: 15, paddingLeft: 12, display: 'block' }}>{item.rationale}</Text>
+                                                            <Text style={{ color: 'var(--color-text-3)', lineHeight: 1.6, fontSize: 14 }}>{item.rationale}</Text>
                                                         </div>
                                                     )}
                                                 </div>
                                             </div>
                                         )}
-                                    </List.Item>
-                                )}
-                            />
+                                    </div>
+                                ))}
+
+                                <div style={{ height: 45, flexShrink: 0 }} />
+                            </div>
                         )}
                     </div>
                 </Card>

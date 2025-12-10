@@ -1,36 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Typography, Upload, Input, Button, Card, Message, Spin, Breadcrumb } from '@arco-design/web-react';
 import { IconUpload, IconFile, IconDelete, IconHome } from '@arco-design/web-react/icon';
 import '@arco-design/web-react/dist/css/arco.css';
-import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useStore } from '../store';
 
 const { Title, Text } = Typography;
 const TextArea = Input.TextArea;
 
-interface Candidate {
-    name: string;
-    email: string;
-    score: number;
-    summary: string;
-    interviewQuestions?: string[];
-    emailDraft?: any;
-}
-
 export const ResumeEvaluation: React.FC = () => {
     const [files, setFiles] = useState<File[]>([]);
     const [jobDescription, setJobDescription] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [report, setReport] = useState<string>('');
 
-    // Load persisted report on mount
-    useEffect(() => {
-        const savedReport = localStorage.getItem('resume_report');
-        if (savedReport) {
-            setReport(savedReport);
-        }
-    }, []);
+    // Global Store
+    const { isAnalyzing, analysisReport, analyzeResume, clearAnalysis } = useStore();
 
     const onFileChange = (fileList: any[]) => {
         const rawFiles = fileList.map(f => f.originFile).filter(Boolean);
@@ -38,8 +22,7 @@ export const ResumeEvaluation: React.FC = () => {
     };
 
     const handleClear = () => {
-        setReport('');
-        localStorage.removeItem('resume_report');
+        clearAnalysis();
         Message.info('已清除评估结果');
     };
 
@@ -54,113 +37,7 @@ export const ResumeEvaluation: React.FC = () => {
             return;
         }
 
-        setLoading(true);
-        const formData = new FormData();
-        formData.append('jobDescription', jobDescription);
-        files.forEach((file) => {
-            formData.append('files', file);
-        });
-
-        try {
-            const res = await axios.post('http://localhost:3000/api/analyze', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-
-            if (res.data.success) {
-                const rawData = res.data.data;
-                let parsedData: any = {};
-
-                if (typeof rawData === 'string') {
-                    try {
-                        parsedData = JSON.parse(rawData);
-                    } catch {
-                        // Fallback if not JSON
-                        parsedData = { final_report: rawData };
-                    }
-                } else {
-                    parsedData = rawData;
-                }
-
-                // 1. Display Report
-                const reportContent = parsedData.final_report || parsedData.data || JSON.stringify(parsedData);
-                setReport(reportContent);
-                localStorage.setItem('resume_report', reportContent);
-
-                // 2. Process Output List for Talent Pool
-                // New Structure: candidate_list, questions_list, email_draft_list
-                const candidateList = parsedData.candidate_list || parsedData.output_list || [];
-                const questionsList = parsedData.questions_list || [];
-                const emailDraftList = parsedData.email_draft_list || [];
-
-                if (Array.isArray(candidateList) && candidateList.length > 0) {
-                    try {
-                        let successCount = 0;
-                        for (let i = 0; i < candidateList.length; i++) {
-                            const item = candidateList[i];
-                            const cName = item.candidate_name || item.name || '未知候选人';
-
-                            // Find matching auxiliary data by candidate_name (preferred) or index (fallback)
-                            let qItem = questionsList.find((q: any) => q.candidate_name === cName);
-                            if (!qItem && questionsList[i] && !questionsList[i].candidate_name) qItem = questionsList[i];
-
-                            let eItem = emailDraftList.find((e: any) => e.candidate_name === cName);
-                            if (!eItem && emailDraftList[i] && !emailDraftList[i].candidate_name) eItem = emailDraftList[i];
-
-                            // Normalize Questions to string array
-                            let normalizedQs: string[] = [];
-                            if (qItem) {
-                                if (qItem.q1) normalizedQs.push(qItem.q1);
-                                if (qItem.q2) normalizedQs.push(qItem.q2);
-                                if (qItem.q3) normalizedQs.push(qItem.q3);
-                            }
-
-                            // Normalize Email Draft
-                            let normalizedEmail = null;
-                            if (eItem) {
-                                normalizedEmail = {
-                                    subject: eItem.subject,
-                                    content: eItem.text || eItem.content
-                                };
-                            }
-
-                            // Extract structured fields
-                            const candidate: Candidate = {
-                                name: cName,
-                                email: item.email || '',
-                                score: Number(item.overall_score || item.score) || 0,
-                                summary: item.summary || 'AI自动评估',
-                                // Attach generated content
-                                interviewQuestions: normalizedQs.length > 0 ? normalizedQs : undefined,
-                                emailDraft: normalizedEmail
-                            };
-
-                            if (candidate.name && candidate.email) {
-                                await axios.post('http://localhost:3000/api/talent/add', candidate);
-                                successCount++;
-                            }
-                        }
-
-                        if (successCount > 0) {
-                            Message.success(`自动识别并添加了 ${successCount} 位候选人到人才库`);
-                        }
-                    } catch (e) {
-                        console.error('Failed to sync talent pool', e);
-                        Message.warning('人才库同步部分失败');
-                    }
-                } else {
-                    console.log('No candidate_list found in response', parsedData);
-                }
-
-                Message.success('分析完成');
-            }
-        } catch (error: any) {
-            console.error(error);
-            const msg = error.response?.data?.message || '分析失败';
-            const details = error.response?.data?.details || '';
-            Message.error(`${msg} ${details}`);
-        } finally {
-            setLoading(false);
-        }
+        await analyzeResume(files, jobDescription);
     };
 
     return (
@@ -220,10 +97,10 @@ export const ResumeEvaluation: React.FC = () => {
                         type="primary"
                         style={{ marginTop: 24, height: 48, fontSize: 16, fontWeight: 600 }}
                         long
-                        loading={loading}
+                        loading={isAnalyzing}
                         onClick={handleAnalyze}
                     >
-                        {loading ? 'AI 正在分析...' : '开始智能评估'}
+                        {isAnalyzing ? 'AI 正在分析...' : '开始智能评估'}
                     </Button>
                 </Card>
 
@@ -232,17 +109,17 @@ export const ResumeEvaluation: React.FC = () => {
                     title={
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span>评估报告</span>
-                            {report && <span style={{ fontSize: 12, color: 'var(--color-text-3)', fontWeight: 'normal' }}>已生成</span>}
+                            {analysisReport && <span style={{ fontSize: 12, color: 'var(--color-text-3)', fontWeight: 'normal' }}>已生成</span>}
                         </div>
                     }
-                    extra={report && <Button icon={<IconDelete />} status="danger" onClick={handleClear} size="small">清除</Button>}
+                    extra={analysisReport && <Button icon={<IconDelete />} status="danger" onClick={handleClear} size="small">清除</Button>}
                     style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
                     bodyStyle={{ flex: 1, overflow: 'hidden', padding: 0, position: 'relative' }} // Constraint overflow here
                     headerStyle={{ padding: '16px 24px' }}
                 >
                     {/* Scrollable Content Area */}
                     <div style={{ height: '100%', overflowY: 'auto', padding: 24 }}>
-                        {loading && (
+                        {isAnalyzing && (
                             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'var(--color-text-3)' }}>
                                 <Spin size={40} />
                                 <p style={{ marginTop: 24 }}>正在调用 AI 工作流进行深度分析...</p>
@@ -250,7 +127,7 @@ export const ResumeEvaluation: React.FC = () => {
                             </div>
                         )}
 
-                        {!loading && !report && (
+                        {!isAnalyzing && !analysisReport && (
                             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'var(--color-text-3)' }}>
                                 <div style={{ width: 120, height: 120, background: 'var(--color-fill-2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
                                     <IconFile style={{ fontSize: 48 }} />
@@ -260,7 +137,7 @@ export const ResumeEvaluation: React.FC = () => {
                             </div>
                         )}
 
-                        {!loading && report && (
+                        {!isAnalyzing && analysisReport && (
                             <div className="markdown-body">
                                 <ReactMarkdown
                                     remarkPlugins={[remarkGfm]}
@@ -287,7 +164,7 @@ export const ResumeEvaluation: React.FC = () => {
                                         li: ({ node, ...props }) => <li {...props} style={{ marginBottom: 8, lineHeight: 1.7 }} />,
                                     }}
                                 >
-                                    {report}
+                                    {analysisReport}
                                 </ReactMarkdown>
                             </div>
                         )}
