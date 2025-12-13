@@ -12,13 +12,15 @@ import {
     Dropdown,
     Menu,
     Breadcrumb,
-    Select
+    Select,
+    Radio
 } from '@arco-design/web-react';
 import { IconPlus, IconRefresh, IconSearch, IconDelete, IconEdit, IconDown, IconDownload, IconHome, IconEmail } from '@arco-design/web-react/icon';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store';
 import '@arco-design/web-react/dist/css/arco.css';
+import { KanbanBoard } from '../components/KanbanBoard';
 
 const { Row, Col } = Grid;
 const FormItem = Form.Item;
@@ -34,6 +36,9 @@ export const TalentPool: React.FC = () => {
     const [modalForm] = Form.useForm();
     const [columns, setColumns] = useState<any[]>([]);
     const navigate = useNavigate();
+
+    // View Mode State
+    const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
 
     // Initial Fetch (Cached)
     useEffect(() => {
@@ -267,18 +272,60 @@ export const TalentPool: React.FC = () => {
         }
     };
 
+    const handleStatusChange = async (id: string, newStatus: string) => {
+        // 1. Optimistic Update: Immediately update local state
+        const previousData = [...filteredData];
+        const newData = filteredData.map(item =>
+            item.id === id ? { ...item, status: newStatus } : item
+        );
+        setFilteredData(newData);
+
+        try {
+            // 2. Call API in background
+            const res = await axios.put(`http://localhost:3000/api/talent/${id}`, { status: newStatus });
+
+            if (res.data.success) {
+                // 3. Success: Silently sync with server to ensure consistency
+                // We don't show success message for every drag to keep it less noisy, or maybe just a subtle one?
+                // Let's keep it clean or use a very lightweight notification if needed.
+                // Message.success(`状态更新为: ${newStatus}`); 
+                fetchTalents(true);
+            } else {
+                throw new Error('Update failed');
+            }
+        } catch (e) {
+            // 4. Failure: Revert to previous state
+            setFilteredData(previousData);
+            Message.error('无法更新状态，操作已回滚');
+        }
+    };
+
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* ... Breadcrumb ... */}
             <Breadcrumb style={{ margin: '0 0 16px 0', flexShrink: 0 }}>
                 <Breadcrumb.Item><IconHome /></Breadcrumb.Item>
                 <Breadcrumb.Item>Dashboard</Breadcrumb.Item>
                 <Breadcrumb.Item>Talent Pool</Breadcrumb.Item>
             </Breadcrumb>
 
+            {/* Search Form (Keep it visible for both views? Yes, helpful) */}
             <Card className='search-form-card' style={{ marginBottom: 20, flexShrink: 0 }}>
+                {/* ... existing search form ... */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                    <span style={{ fontSize: 16, fontWeight: 500 }}>查询表格</span>
+                    <span style={{ fontSize: 16, fontWeight: 500 }}>人才管理</span>
+                    <Radio.Group
+                        type='button'
+                        name='lang'
+                        value={viewMode}
+                        onChange={setViewMode}
+                        options={[
+                            { label: '列表视图', value: 'table' },
+                            { label: '看板视图', value: 'kanban' },
+                        ]}
+                    />
                 </div>
+                {/* ... form content ... */}
                 <Form form={form} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
                     <Row gutter={24}>
                         <Col span={8}>
@@ -299,33 +346,41 @@ export const TalentPool: React.FC = () => {
                 </Form>
             </Card>
 
-            <Card
-                className="table-card"
-                style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}
-                bodyStyle={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '16px 24px' }}
-            >
-                <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
-                    <Space>
-                        <Button type="primary" icon={<IconPlus />} onClick={handleCreate}>新建</Button>
-                        <Button icon={<IconRefresh />} onClick={handleRefresh}>刷新</Button>
-                    </Space>
-                    <Button icon={<IconDownload />} onClick={handleDownload}>下载</Button>
-                </div>
+            {/* Content Area */}
+            {viewMode === 'table' ? (
+                <Card
+                    className="table-card"
+                    style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}
+                    bodyStyle={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '16px 24px' }}
+                >
+                    <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
+                        <Space>
+                            <Button type="primary" icon={<IconPlus />} onClick={handleCreate}>新建</Button>
+                            <Button icon={<IconRefresh />} onClick={handleRefresh}>刷新</Button>
+                        </Space>
+                        <Button icon={<IconDownload />} onClick={handleDownload}>下载</Button>
+                    </div>
 
-                <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                    <Table
-                        loading={loadingTalents}
-                        data={filteredData}
-                        columns={columns}
-                        rowKey="id"
-                        pagination={{ showTotal: true, pageSize: 10, sizeOptions: [10, 20, 50] }}
-                        border={false}
-                        scroll={{ y: true }}
-                        style={{ height: '100%' }}
-                    />
+                    <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                        <Table
+                            loading={loadingTalents}
+                            data={filteredData}
+                            columns={columns}
+                            rowKey="id"
+                            pagination={{ showTotal: true, pageSize: 10, sizeOptions: [10, 20, 50] }}
+                            border={false}
+                            scroll={{ y: true }}
+                            style={{ height: '100%' }}
+                        />
+                    </div>
+                </Card>
+            ) : (
+                <div style={{ flex: 1, overflow: 'hidden', minHeight: 0, paddingBottom: 24 }}>
+                    <KanbanBoard candidates={filteredData} onStatusChange={handleStatusChange} />
                 </div>
-            </Card>
+            )}
 
+            {/* ... Modal ... */}
             <Modal
                 title={modalType === 'create' ? 'Create Candidate' : 'Edit Candidate'}
                 visible={modalVisible}
@@ -333,6 +388,7 @@ export const TalentPool: React.FC = () => {
                 onCancel={() => setModalVisible(false)}
                 autoFocus={false}
             >
+                {/* ... existing modal form ... */}
                 <Form form={modalForm} layout="vertical">
                     <FormItem label="Name" field="candidate_name" rules={[{ required: true }]}>
                         <Input />
@@ -354,6 +410,6 @@ export const TalentPool: React.FC = () => {
                     </FormItem>
                 </Form>
             </Modal>
-        </div>
+        </div >
     );
 };
