@@ -16,10 +16,10 @@ export const Login: React.FC = () => {
     const handleSubmit = async (values: Record<string, any>) => {
         setLoading(true);
         try {
-            // Using http://localhost:3000 explicitly or proxy
+            // Using http://localhost:3000
             const res = await axios.post('http://localhost:3000/api/login', values);
             if (res.data.token) {
-                localStorage.removeItem('resume_report'); // Clear previous session data
+                localStorage.removeItem('resume_report');
                 setUser({ name: res.data.user?.name || 'User', token: res.data.token });
                 Message.success('登录成功');
                 navigate('/dashboard/home');

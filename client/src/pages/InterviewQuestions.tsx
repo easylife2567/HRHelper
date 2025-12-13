@@ -16,7 +16,6 @@ export const InterviewQuestions: React.FC = () => {
         fetchTalents();
     }, []);
 
-    // Deduplicate and Sort Candidates
     const processedCandidates = React.useMemo(() => {
         const unique = new Map();
         talentList.forEach((t: any) => {
@@ -26,12 +25,10 @@ export const InterviewQuestions: React.FC = () => {
         });
 
         return Array.from(unique.values()).sort((a: any, b: any) => {
-            // Priority Sort: High score first
             return (b.score || 0) - (a.score || 0);
         });
     }, [talentList]);
 
-    // Select first candidate by default
     useEffect(() => {
         if (!selectedCandidate && processedCandidates.length > 0) {
             const withQuestions = processedCandidates.find((c: any) => c.interviewQuestions && c.interviewQuestions.length > 0);
@@ -42,10 +39,10 @@ export const InterviewQuestions: React.FC = () => {
     const getGradeColor = (grade: string) => {
         if (!grade) return '#165DFF';
         const g = grade.toUpperCase();
-        if (g.includes('S')) return '#F53F3F'; // Red
-        if (g.includes('A')) return '#FF7D00'; // Orange
-        if (g.includes('B')) return '#165DFF'; // Blue
-        return '#86909C'; // Gray
+        if (g.includes('S')) return '#F53F3F';
+        if (g.includes('A')) return '#FF7D00';
+        if (g.includes('B')) return '#165DFF';
+        return '#86909C';
     };
 
     return (
@@ -55,7 +52,6 @@ export const InterviewQuestions: React.FC = () => {
             </div>
 
             <div style={{ flex: 1, display: 'flex', gap: 24, minHeight: 0 }}>
-                {/* Left Sidebar: Candidate List */}
                 <Card
                     style={{ width: 320, height: '100%', display: 'flex', flexDirection: 'column' }}
                     bodyStyle={{ padding: 0, flex: 1, overflowY: 'auto' }}
@@ -82,7 +78,6 @@ export const InterviewQuestions: React.FC = () => {
                                         </Tag>
                                     ) : (
                                         <Tag color={getGradeColor(item.score >= 90 ? 'S' : item.score >= 75 ? 'A' : 'B')} size="small" bordered>
-                                            {/* Fallback if grade is missing */}
                                             {item.score >= 90 ? 'S' : item.score >= 75 ? 'A' : 'B'}级
                                         </Tag>
                                     )}
@@ -96,7 +91,6 @@ export const InterviewQuestions: React.FC = () => {
                     />
                 </Card>
 
-                {/* Right Content: Questions */}
                 <Card
                     style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column' }}
                     bodyStyle={{ padding: 24, flex: 1, overflowY: 'auto' }}
@@ -116,14 +110,9 @@ export const InterviewQuestions: React.FC = () => {
                 >
                     {selectedCandidate ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                            {/* Summary Card REMOVED as per request */}
-
-                            {/* Questions List */}
                             {selectedCandidate.interviewQuestions && selectedCandidate.interviewQuestions.length > 0 ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                                     {selectedCandidate.interviewQuestions.map((q: any, idx: number) => {
-                                        // Handle both string and object formats
-                                        // q can be a string, OR an object { category, difficulty, question, rationale }
                                         const isObject = typeof q === 'object' && q !== null;
                                         const questionText = isObject ? (q.question || JSON.stringify(q)) : q;
                                         const category = isObject ? q.category : null;
@@ -141,7 +130,6 @@ export const InterviewQuestions: React.FC = () => {
                                                         {idx + 1}
                                                     </div>
                                                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                                        {/* Metadata Row */}
                                                         {(category || difficulty) && (
                                                             <div style={{ display: 'flex', gap: 8 }}>
                                                                 {category && <Tag color="arcoblue" size="small">{category}</Tag>}
@@ -149,14 +137,12 @@ export const InterviewQuestions: React.FC = () => {
                                                             </div>
                                                         )}
 
-                                                        {/* Question Text */}
                                                         <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--color-text-1)', lineHeight: 1.5 }}>
                                                             <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                                                 {questionText}
                                                             </ReactMarkdown>
                                                         </div>
 
-                                                        {/* Rationale */}
                                                         {rationale && (
                                                             <div style={{
                                                                 marginTop: 8,

@@ -72,7 +72,6 @@ export class CozeService {
             console.log('Coze Workflow Response:', response.data);
 
             if (response.data?.code === 0) {
-                // Check if workflow is interrupted for authentication
                 if (response.data.interrupt_data) {
                     const interruptData = response.data.interrupt_data;
                     let innerData;

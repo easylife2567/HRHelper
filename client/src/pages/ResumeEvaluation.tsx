@@ -54,7 +54,6 @@ export const ResumeEvaluation: React.FC = () => {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: 24, height: 'calc(100vh - 120px)', minHeight: 0 }}>
-                {/* Left Panel: Configuration */}
                 <Card
                     title="配置与上传"
                     style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
@@ -104,7 +103,6 @@ export const ResumeEvaluation: React.FC = () => {
                     </Button>
                 </Card>
 
-                {/* Right Panel: Results */}
                 <Card
                     title={
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -117,7 +115,6 @@ export const ResumeEvaluation: React.FC = () => {
                     bodyStyle={{ flex: 1, overflow: 'hidden', padding: 0, position: 'relative' }} // Constraint overflow here
                     headerStyle={{ padding: '16px 24px' }}
                 >
-                    {/* Scrollable Content Area */}
                     <div style={{ height: '100%', overflowY: 'auto', padding: 24 }}>
                         {isAnalyzing && (
                             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'var(--color-text-3)' }}>

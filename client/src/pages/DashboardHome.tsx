@@ -21,7 +21,6 @@ export const DashboardHome: React.FC = () => {
         fail: 0
     });
 
-    // Chart Data State
     const [scoreData, setScoreData] = useState<any[]>([]);
     const [statusData, setStatusData] = useState<any[]>([]);
 
@@ -35,9 +34,8 @@ export const DashboardHome: React.FC = () => {
 
             const list = talentList;
 
-            // Helper: Safe Score Parsing (Handles numbers, strings, ['85'], {value: 85}, etc.)
             const getSafeScore = (item: any): number => {
-                const raw = item.score ?? item.overall_score; // Prioritize mapped 'score'
+                const raw = item.score ?? item.overall_score;
                 if (typeof raw === 'number') return raw;
                 if (typeof raw === 'string') return parseFloat(raw) || 0;
                 if (Array.isArray(raw) && raw.length > 0) return Number(raw[0]) || 0;
@@ -45,7 +43,6 @@ export const DashboardHome: React.FC = () => {
                 return 0;
             };
 
-            // Helper: Safe Status Parsing
             const getSafeStatus = (item: any): string => {
                 const raw = item.status;
                 if (typeof raw === 'string') return raw.trim();
@@ -54,7 +51,6 @@ export const DashboardHome: React.FC = () => {
                 return '';
             };
 
-            // Calculate Stats
             let pending = 0, pass = 0, fail = 0;
             const scores = {
                 '60分以下': 0, '60-70分': 0, '70-80分': 0, '80-90分': 0, '90分以上': 0
@@ -80,7 +76,7 @@ export const DashboardHome: React.FC = () => {
             setStats({ total: list.length, pending, pass, fail });
             setScoreData(Object.entries(scores).map(([name, value]) => ({ name, value })));
 
-            // Pie Chart Data
+
             const other = list.length - pending - pass - fail;
             const newStatusData = [
                 { name: '待面试', value: pending, color: '#FF7D00' },
@@ -106,9 +102,7 @@ export const DashboardHome: React.FC = () => {
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <Spin loading={loadingTalents} style={{ display: 'block', height: '100%' }}>
                 <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                    {/* Header - Fixed */}
                     <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-                        {/* ... existing header content ... */}
                         <div>
                             <Title heading={4} style={{ margin: 0 }}>
                                 欢迎回来, {user?.name || '招聘官'}
@@ -124,11 +118,8 @@ export const DashboardHome: React.FC = () => {
                         </Space>
                     </div>
 
-                    {/* Scrollable Content */}
                     <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0, paddingRight: 4 }}>
-                        {/* Statistics Section */}
                         <Row gutter={24} style={{ marginBottom: 24 }}>
-                            {/* ... existing stats cards ... */}
                             <Col span={6}>
                                 <Card hoverable className="stat-card">
                                     <Statistic
@@ -175,7 +166,6 @@ export const DashboardHome: React.FC = () => {
                             </Col>
                         </Row>
 
-                        {/* Charts Section [NEW] */}
                         <Row gutter={24} style={{ marginBottom: 24 }}>
                             <Col span={14}>
                                 <Card title="候选人分数分布" style={{ height: 360 }}>
@@ -235,7 +225,7 @@ export const DashboardHome: React.FC = () => {
                         </Row>
 
 
-                        {/* Quick Actions & System Status */}
+
                         <Row gutter={24}>
                             <Col span={16}>
                                 <Card title="快捷操作">
