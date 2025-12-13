@@ -1,275 +1,187 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Card, Button, Message, Typography, Empty, Space, Breadcrumb, Menu, Badge, Avatar, Input } from '@arco-design/web-react';
-import { IconCopy, IconDownload, IconMessage, IconHome, IconUser, IconSearch } from '@arco-design/web-react/icon';
-import { useLocation } from 'react-router-dom';
-import { useStore } from '../store';
-import '@arco-design/web-react/dist/css/arco.css';
 
-const { Text } = Typography;
-const MenuItem = Menu.Item;
+import React, { useEffect, useState } from 'react';
+import { Card, Typography, List, Tag, Empty } from '@arco-design/web-react';
+import { IconMessage } from '@arco-design/web-react/icon';
+import { useStore } from '../store';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
+const { Title, Text } = Typography;
 
 export const InterviewQuestions: React.FC = () => {
-    const location = useLocation();
     const { talentList, fetchTalents } = useStore();
+    const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
 
-    // State
-    const [selectedCandidateId, setSelectedCandidateId] = useState<string>('');
-    const [searchTerm, setSearchTerm] = useState('');
-
-    // Fetch data on mount if empty
     useEffect(() => {
-        if (talentList.length === 0) {
-            fetchTalents();
-        }
+        fetchTalents();
     }, []);
 
-    // Process Candidates: Dedup & Sort
-    const processedCandidates = useMemo(() => {
-        // 1. Deduplicate by Email (prefer items with questions)
-        const uniqueMap = new Map();
-        talentList.forEach((item: any) => {
-            const key = item.email || item.candidate_name;
-            if (!key) return;
-
-            // If existing item has no questions but new one does, replace it
-            const existing = uniqueMap.get(key);
-            const hasQuestions = item.interviewQuestions && item.interviewQuestions.length > 0;
-
-            if (!existing || (hasQuestions && (!existing.interviewQuestions || existing.interviewQuestions.length === 0))) {
-                uniqueMap.set(key, item);
+    // Deduplicate and Sort Candidates
+    const processedCandidates = React.useMemo(() => {
+        const unique = new Map();
+        talentList.forEach((t: any) => {
+            if (!unique.has(t.email)) {
+                unique.set(t.email, t);
             }
         });
 
-        const list = Array.from(uniqueMap.values());
-
-        // 2. Sort by Grade (Priority)
-        const gradeOrder: Record<string, number> = { 'S': 0, 'A': 1, 'B': 2, 'C': 3, 'D': 4 };
-        return list.sort((a, b) => {
-            const gradeA = gradeOrder[a.grade] ?? 99;
-            const gradeB = gradeOrder[b.grade] ?? 99;
-            if (gradeA !== gradeB) return gradeA - gradeB;
-            // Fallback to score
-            return (b.overall_score || 0) - (a.overall_score || 0);
+        return Array.from(unique.values()).sort((a: any, b: any) => {
+            // Priority Sort: High score first
+            return (b.score || 0) - (a.score || 0);
         });
     }, [talentList]);
 
-    // Filtered list for sidebar
-    const filteredCandidates = useMemo(() => {
-        return processedCandidates.filter(c =>
-            c.candidate_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            c.email?.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [processedCandidates, searchTerm]);
-
-    // Handle initial selection from navigation
+    // Select first candidate by default
     useEffect(() => {
-        if (location.state && location.state.candidate) {
-            setSelectedCandidateId(location.state.candidate.id || location.state.candidate.record_id);
-        } else if (processedCandidates.length > 0 && !selectedCandidateId) {
-            // Optional: Auto-select first if none selected? 
-            // Let's not auto-select to keep state clean, unless user wants it. 
-            // But usually it's better to show empty state until clicked.
+        if (!selectedCandidate && processedCandidates.length > 0) {
+            const withQuestions = processedCandidates.find((c: any) => c.interviewQuestions && c.interviewQuestions.length > 0);
+            setSelectedCandidate(withQuestions || processedCandidates[0]);
         }
-    }, [location.state, processedCandidates]);
-
-    const currentCandidate = processedCandidates.find(c => (c.id === selectedCandidateId || c.record_id === selectedCandidateId));
-    const questions = currentCandidate?.interviewQuestions || [];
-
-    const handleCopy = () => {
-        if (!questions.length) return;
-        const text = questions.map((q: any, i: number) => {
-            if (typeof q === 'string') return q;
-            return `问题${i + 1}: ${q.question}\n类别: ${q.category || '通用'}\n难度: ${q.difficulty || '中'}\n考察点: ${q.rationale || ''}`;
-        }).join('\n\n');
-
-        navigator.clipboard.writeText(text).then(() => {
-            Message.success('面试题已复制到剪贴板');
-        }).catch(() => {
-            Message.error('复制失败');
-        });
-    };
-
-    const handleExport = () => {
-        if (!questions.length) return;
-        const text = questions.map((q: any, i: number) => {
-            if (typeof q === 'string') return q;
-            return `【问题${i + 1}】${q.question}\n[参考信息] 类别: ${q.category} | 难度: ${q.difficulty}\n[考察点] ${q.rationale}`;
-        }).join('\n\n------------------------\n\n');
-
-        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${currentCandidate?.candidate_name || 'candidate'}_面试题.txt`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
+    }, [processedCandidates]);
 
     const getGradeColor = (grade: string) => {
-        switch (grade) {
-            case 'S': return '#f53f3f'; // Red
-            case 'A': return '#ff7d00'; // Orange
-            case 'B': return '#165dff'; // Blue
-            case 'C': return '#86909c'; // Gray
-            default: return 'var(--color-text-3)';
-        }
+        if (!grade) return '#165DFF';
+        const g = grade.toUpperCase();
+        if (g.includes('S')) return '#F53F3F'; // Red
+        if (g.includes('A')) return '#FF7D00'; // Orange
+        if (g.includes('B')) return '#165DFF'; // Blue
+        return '#86909C'; // Gray
     };
 
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <Breadcrumb style={{ margin: '16px 0', flexShrink: 0 }}>
-                <Breadcrumb.Item><IconHome /></Breadcrumb.Item>
-                <Breadcrumb.Item>Dashboard</Breadcrumb.Item>
-                <Breadcrumb.Item>Interview Questions</Breadcrumb.Item>
-            </Breadcrumb>
+            <div style={{ marginBottom: 16 }}>
+                <Title heading={3} style={{ marginTop: 0 }}>个性化面试题</Title>
+            </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 16, flex: 1, minHeight: 0 }}>
+            <div style={{ flex: 1, display: 'flex', gap: 24, minHeight: 0 }}>
                 {/* Left Sidebar: Candidate List */}
                 <Card
-                    style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
-                    bodyStyle={{ padding: 0, flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-                    title="人才库"
+                    style={{ width: 320, height: '100%', display: 'flex', flexDirection: 'column' }}
+                    bodyStyle={{ padding: 0, flex: 1, overflowY: 'auto' }}
+                    title={`候选人列表 (${processedCandidates.length})`}
                 >
-                    <div style={{ padding: '20px 20px 12px 20px', borderBottom: '1px solid var(--color-border)' }}>
-                        <Input prefix={<IconSearch />} placeholder="搜索候选人..." value={searchTerm} onChange={setSearchTerm} allowClear style={{ borderRadius: 8 }} />
-                    </div>
-                    <div style={{ flex: 1, overflowY: 'auto', padding: '12px 8px' }}>
-                        <Menu
-                            selectedKeys={[selectedCandidateId]}
-                            onClickMenuItem={(key) => setSelectedCandidateId(key)}
-                            style={{ width: '100%', border: 'none' }}
-                        >
-                            {filteredCandidates.map(item => (
-                                <MenuItem key={item.id || item.record_id} style={{ height: 'auto', minHeight: '80px', padding: '8px 12px', marginBottom: 4, borderRadius: 8, lineHeight: '1.4' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '0' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', overflow: 'hidden', flex: 1, marginRight: 8 }}>
-                                            <Avatar
-                                                size={44}
-                                                style={{ backgroundColor: getGradeColor(item.grade), marginRight: 14, flexShrink: 0 }}
-                                            >
-                                                {item.candidate_name ? item.candidate_name[0] : 'U'}
-                                            </Avatar>
-                                            <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                                                <Text style={{ fontWeight: 600, fontSize: 16, marginBottom: 2, color: 'var(--color-text-1)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                                                    {item.candidate_name || 'Unknown'}
-                                                </Text>
-                                                <Text style={{ fontSize: 13, color: 'var(--color-text-3)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                                                    {item.job_title || '应聘者'}
-                                                </Text>
-                                            </div>
-                                        </div>
-                                        <Badge
-                                            text={item.grade || 'N/A'}
-                                            color={getGradeColor(item.grade)}
-                                        />
-                                    </div>
-                                </MenuItem>
-                            ))}
-                            {filteredCandidates.length === 0 && (
-                                <Empty description="无匹配结果" style={{ padding: 24 }} />
-                            )}
-                        </Menu>
-                    </div>
+                    <List
+                        dataSource={processedCandidates}
+                        render={(item: any, index) => (
+                            <List.Item
+                                key={item.email}
+                                style={{
+                                    cursor: 'pointer',
+                                    borderLeft: selectedCandidate?.email === item.email ? `4px solid ${getGradeColor(item.grade)}` : '4px solid transparent',
+                                    backgroundColor: selectedCandidate?.email === item.email ? 'var(--color-fill-2)' : 'transparent',
+                                    padding: '12px 16px'
+                                }}
+                                onClick={() => setSelectedCandidate(item)}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                                    <Text bold style={{ fontSize: 15 }}>{item.name}</Text>
+                                    {item.grade ? (
+                                        <Tag color={getGradeColor(item.grade)} size="small" bordered>
+                                            {item.grade}
+                                        </Tag>
+                                    ) : (
+                                        <Tag color={getGradeColor(item.score >= 90 ? 'S' : item.score >= 75 ? 'A' : 'B')} size="small" bordered>
+                                            {/* Fallback if grade is missing */}
+                                            {item.score >= 90 ? 'S' : item.score >= 75 ? 'A' : 'B'}级
+                                        </Tag>
+                                    )}
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Text type="secondary" style={{ fontSize: 12 }}>{item.email}</Text>
+                                    {item.interviewQuestions ? <IconMessage style={{ color: '#00B42A' }} /> : null}
+                                </div>
+                            </List.Item>
+                        )}
+                    />
                 </Card>
 
                 {/* Right Content: Questions */}
                 <Card
-                    style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
-                    bodyStyle={{ flex: 1, overflow: 'hidden', padding: 0, position: 'relative' }}
-                    title={
-                        currentCandidate ? (
-                            <div style={{ display: 'flex', alignItems: 'center' }}>
-                                <span style={{ marginRight: 12, fontSize: 18, fontWeight: 600 }}>{currentCandidate.candidate_name} 的面试题</span>
-                                {currentCandidate.grade && <Badge text={`${currentCandidate.grade}级`} color={getGradeColor(currentCandidate.grade)} />}
-                            </div>
-                        ) : '个性化面试题'
-                    }
-                    extra={
-                        <Space>
-                            <Button size="small" icon={<IconCopy />} onClick={handleCopy} disabled={!questions.length}>复制</Button>
-                            <Button size="small" type="primary" icon={<IconDownload />} onClick={handleExport} disabled={!questions.length}>导出</Button>
-                        </Space>
-                    }
+                    style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column' }}
+                    bodyStyle={{ padding: 24, flex: 1, overflowY: 'auto' }}
+                    title={selectedCandidate ? (
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <div style={{ marginRight: 12, fontWeight: 'bold' }}>{selectedCandidate.name}</div>
+                            {selectedCandidate.grade && (
+                                <Tag color={getGradeColor(selectedCandidate.grade)}>
+                                    等级: {selectedCandidate.grade}
+                                </Tag>
+                            )}
+                            <Tag style={{ marginLeft: 8 }}>
+                                评分: {selectedCandidate.score}
+                            </Tag>
+                        </div>
+                    ) : '面试题详情'}
                 >
-                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflowY: 'auto', padding: '32px 40px 100px 40px', backgroundColor: 'var(--color-fill-1)' }}>
-                        {!currentCandidate ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                                <IconUser style={{ fontSize: 64, color: 'var(--color-text-3)', marginBottom: 16 }} />
-                                <Text style={{ color: 'var(--color-text-3)', fontSize: 16 }}>请从左侧选择一位候选人以查看面试题</Text>
-                            </div>
-                        ) : questions.length === 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                                <IconMessage style={{ fontSize: 64, color: 'var(--color-text-3)', marginBottom: 16 }} />
-                                <Text style={{ color: 'var(--color-text-3)', fontSize: 16 }}>该候选人暂无生成的面试题</Text>
-                            </div>
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                                {questions.map((item: any, index: number) => (
-                                    <div
-                                        key={index}
-                                        style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: 12,
-                                            padding: '24px 32px',
-                                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-                                            border: '1px solid var(--color-border)'
-                                        }}
-                                    >
-                                        {typeof item === 'string' ? (
-                                            <div style={{ fontSize: 17, lineHeight: 1.8, color: 'var(--color-text-1)' }}>{item}</div>
-                                        ) : (
-                                            <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-                                                {/* Number Badge */}
-                                                <div style={{
-                                                    display: 'flex',
-                                                    justifyContent: 'center',
-                                                    alignItems: 'center',
-                                                    width: 40,
-                                                    height: 40,
-                                                    borderRadius: '50%',
-                                                    background: 'linear-gradient(135deg, rgb(var(--primary-5)), rgb(var(--primary-7)))',
-                                                    color: '#fff',
-                                                    marginRight: 24,
-                                                    fontSize: 20,
-                                                    fontWeight: 'bold',
-                                                    flexShrink: 0,
-                                                    boxShadow: '0 4px 10px rgba(var(--primary-6), 0.3)',
-                                                    marginTop: 2
-                                                }}>
-                                                    {index + 1}
-                                                </div>
+                    {selectedCandidate ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                            {/* Summary Card REMOVED as per request */}
 
-                                                {/* Content */}
-                                                <div style={{ flex: 1 }}>
-                                                    <Text bold style={{ fontSize: 18, lineHeight: 1.6, color: 'var(--color-text-1)', display: 'block', marginBottom: 12 }}>
-                                                        {item.question}
-                                                    </Text>
+                            {/* Questions List */}
+                            {selectedCandidate.interviewQuestions && selectedCandidate.interviewQuestions.length > 0 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                                    {selectedCandidate.interviewQuestions.map((q: any, idx: number) => {
+                                        // Handle both string and object formats
+                                        // q can be a string, OR an object { category, difficulty, question, rationale }
+                                        const isObject = typeof q === 'object' && q !== null;
+                                        const questionText = isObject ? (q.question || JSON.stringify(q)) : q;
+                                        const category = isObject ? q.category : null;
+                                        const difficulty = isObject ? q.difficulty : null;
+                                        const rationale = isObject ? q.rationale : null;
 
-                                                    <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
-                                                        {item.category && <span style={{ padding: '4px 12px', background: 'var(--color-fill-2)', borderRadius: 20, fontSize: 12, color: 'var(--color-text-2)', border: '1px solid var(--color-border-2)' }}>类别: {item.category}</span>}
-                                                        {item.difficulty && <span style={{ padding: '4px 12px', background: 'var(--color-fill-2)', borderRadius: 20, fontSize: 12, color: 'var(--color-text-2)', border: '1px solid var(--color-border-2)' }}>难度: {item.difficulty}</span>}
+                                        return (
+                                            <Card key={idx} bordered={true} hoverable style={{ borderColor: 'var(--color-border-2)' }}>
+                                                <div style={{ display: 'flex', gap: 16 }}>
+                                                    <div style={{
+                                                        minWidth: 28, height: 28, borderRadius: '50%', backgroundColor: 'rgb(var(--primary-6))',
+                                                        color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: 14,
+                                                        marginTop: -5
+                                                    }}>
+                                                        {idx + 1}
                                                     </div>
-
-                                                    {item.rationale && (
-                                                        <div style={{ background: 'var(--color-fill-1)', padding: '16px 20px', borderRadius: 8 }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-                                                                <div style={{ width: 4, height: 14, background: 'rgb(var(--primary-6))', borderRadius: 2, marginRight: 8 }}></div>
-                                                                <Text style={{ fontWeight: 'bold', fontSize: 13, color: 'var(--color-text-2)' }}>考察点 / 评分标准</Text>
+                                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                                        {/* Metadata Row */}
+                                                        {(category || difficulty) && (
+                                                            <div style={{ display: 'flex', gap: 8 }}>
+                                                                {category && <Tag color="arcoblue" size="small">{category}</Tag>}
+                                                                {difficulty && <Tag color="orange" size="small">{difficulty}</Tag>}
                                                             </div>
-                                                            <Text style={{ color: 'var(--color-text-3)', lineHeight: 1.6, fontSize: 14 }}>{item.rationale}</Text>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
+                                                        )}
 
-                                <div style={{ height: 45, flexShrink: 0 }} />
-                            </div>
-                        )}
-                    </div>
+                                                        {/* Question Text */}
+                                                        <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--color-text-1)', lineHeight: 1.5 }}>
+                                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                                {questionText}
+                                                            </ReactMarkdown>
+                                                        </div>
+
+                                                        {/* Rationale */}
+                                                        {rationale && (
+                                                            <div style={{
+                                                                marginTop: 8,
+                                                                padding: '8px 12px',
+                                                                backgroundColor: 'var(--color-fill-2)',
+                                                                borderRadius: 4,
+                                                                fontSize: 13,
+                                                                color: 'var(--color-text-2)'
+                                                            }}>
+                                                                <strong>考察意图：</strong> {rationale}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </Card>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <Empty description="该候选人暂无生成的面试题" />
+                            )}
+                        </div>
+                    ) : (
+                        <Empty description="请选择一位候选人查看面试题" />
+                    )}
                 </Card>
             </div>
         </div>

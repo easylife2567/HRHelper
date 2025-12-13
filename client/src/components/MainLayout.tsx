@@ -88,7 +88,7 @@ export const MainLayout: React.FC = () => {
                         </Dropdown>
                     </Space>
                 </Header>
-                <Content style={{ padding: 24, backgroundColor: '#f2f3f5', overflow: 'auto' }}>
+                <Content style={{ padding: 24, backgroundColor: '#f2f3f5', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                     <Outlet />
                 </Content>
             </Layout>

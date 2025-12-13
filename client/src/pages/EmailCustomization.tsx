@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Form, Input, Button, Message, List, Typography, Breadcrumb } from '@arco-design/web-react';
 import axios from 'axios';
-import { useLocation } from 'react-router-dom';
-import { IconHome, IconEmail, IconApps, IconSend, IconEdit } from '@arco-design/web-react/icon';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { IconHome, IconEmail, IconApps, IconSend, IconEdit, IconLeft } from '@arco-design/web-react/icon';
 import '@arco-design/web-react/dist/css/arco.css';
 
 const { Title, Text } = Typography;
@@ -33,6 +33,7 @@ const TEMPLATES = [
 export const EmailCustomization: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const location = useLocation();
+    const navigate = useNavigate();
     const [form] = Form.useForm();
     const [initialValues, setInitialValues] = useState({ to: '', subject: '', content: '' });
 
@@ -81,7 +82,10 @@ export const EmailCustomization: React.FC = () => {
                     <Breadcrumb.Item>Dashboard</Breadcrumb.Item>
                     <Breadcrumb.Item>Email Customization</Breadcrumb.Item>
                 </Breadcrumb>
-                <Title heading={3} style={{ marginTop: 0, marginBottom: 16 }}>邮件定制</Title>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16, gap: 12 }}>
+                    <Button onClick={() => navigate(-1)} type="primary" shape="circle" icon={<IconLeft />} />
+                    <Title heading={3} style={{ margin: 0 }}>邮件定制</Title>
+                </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 24, flex: 1, minHeight: 0 }}>

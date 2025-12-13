@@ -87,6 +87,7 @@ export class FeishuService {
                     name: f["candidate_name"] || f["姓名"],
                     email: f["email"] || f["邮箱"],
                     score: f["overall_score"] || f["评分"],
+                    grade: f["grade"] || f["等级"],
                     summary: f["summary"] || f["总结"],
                     interviewQuestions: questions,
                     emailDraft: emailDraft,
@@ -193,7 +194,7 @@ export class FeishuService {
             "candidate_name": data.name,
             "overall_score": data.score,
             "email": data.email,
-            "summary": data.summary,
+            // "summary": data.summary, // Field does not exist in Table, disabling to prevent 1254045 error
             "status": "待面试"
         };
 
