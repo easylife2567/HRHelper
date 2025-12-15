@@ -115,7 +115,7 @@ export const ResumeEvaluation: React.FC = () => {
                     bodyStyle={{ flex: 1, overflow: 'hidden', padding: 0, position: 'relative' }} // Constraint overflow here
                     headerStyle={{ padding: '16px 24px' }}
                 >
-                    <div style={{ height: '100%', overflowY: 'auto', padding: 24 }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflowY: 'auto', padding: 24 }}>
                         {isAnalyzing && (
                             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'var(--color-text-3)' }}>
                                 <Spin size={40} />
