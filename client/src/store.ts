@@ -87,12 +87,9 @@ export const useStore = create<AppState>((set, get) => ({
                     parsedData = rawData;
                 }
 
-                // 1. Display Report
                 const reportContent = parsedData.final_report || parsedData.data || JSON.stringify(parsedData);
                 set({ analysisReport: reportContent });
                 localStorage.setItem('resume_report', reportContent);
-
-                // 2. Process Output List for Talent Pool
                 const candidateList = parsedData.candidate_list || parsedData.output_list || [];
                 const questionsList = parsedData.questions_list || [];
                 const emailDraftList = parsedData.email_draft_list || [];
@@ -140,22 +137,16 @@ export const useStore = create<AppState>((set, get) => ({
                             }
                         }
 
-                        // Notify success (We can't easily import Message here if not React context, 
-                        // but Arco Message is static. If it fails, we catch it)
-                        // Ideally we return success status to component, but logic is moved here.
-                        // For now we assume the component watches state or we trust the console/UI state.
                         console.log(`Successfully added ${successCount} candidates`);
                     } catch (e) {
                         console.error('Failed to sync talent pool', e);
                     }
                 }
 
-                // Refresh talent list after adding
                 get().fetchTalents(true);
             }
         } catch (error: any) {
             console.error('Analysis failed', error);
-            // In a real app we might set an error state
         } finally {
             set({ isAnalyzing: false });
         }
